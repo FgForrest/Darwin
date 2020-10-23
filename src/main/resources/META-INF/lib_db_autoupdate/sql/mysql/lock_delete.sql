@@ -1,0 +1,1 @@
+delete from T_DB_AUTOUPDATE_LOCK where PROCESS_TX = ? and (LEASE_UNTIL_DT <= now() or UNLOCK_KEY_TX = ?);

@@ -1,0 +1,1 @@
+SELECT * FROM T_DB_AUTOUPDATE_PATCH WHERE patchName = ? AND componentName = ? AND platform = ?;

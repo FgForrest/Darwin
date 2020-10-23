@@ -1,0 +1,1 @@
+SELECT SYSDATE as currentTime FROM DUAL

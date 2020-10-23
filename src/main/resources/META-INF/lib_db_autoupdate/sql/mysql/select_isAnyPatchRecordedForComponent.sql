@@ -1,0 +1,1 @@
+SELECT id FROM T_DB_AUTOUPDATE_PATCH WHERE componentName =?

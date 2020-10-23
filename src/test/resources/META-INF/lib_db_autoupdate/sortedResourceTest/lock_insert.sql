@@ -1,0 +1,1 @@
+insert into T_DB_AUTOUPDATE_LOCK (PROCESS_TX, LEASE_UNTIL_DT, UNLOCK_KEY_TX) values (?, ?, ?);

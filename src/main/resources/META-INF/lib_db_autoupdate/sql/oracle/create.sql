@@ -1,0 +1,6 @@
+create table T_DB_AUTOUPDATE 
+(
+  COMPONENT_TX VARCHAR2(255) not null,
+  MODIFIED_DT TIMESTAMP not null,
+  VERSION_TX VARCHAR2(20) null  
+);

@@ -1,0 +1,2 @@
+INSERT INTO "T_MAIL_NEWSLETTER_BODY" (id, idNewsletter, partName, bodyPart) VALUES (1, 1, 'question', 'How it''s goin'' bro?');
+INSERT INTO "T_MAIL_NEWSLETTER_BODY" (id, idNewsletter, partName, bodyPart) VALUES (2, 1, 'answer', 'Sweet as hell!!!');

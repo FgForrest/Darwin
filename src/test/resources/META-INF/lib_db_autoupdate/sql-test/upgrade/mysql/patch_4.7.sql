@@ -1,0 +1,2 @@
+INSERT INTO T_DB_AUTOUPDATE (COMPONENT_TX, MODIFIED_DT, VERSION_TX) VALUES ('pokusna se povedla',now(),1.0);
+INSERT INTO T_DB_AUTOUPDATE_PATCH (componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES ('testovaci','patch 3.7 byl proveden',15,'2016-06-28','2016-06-28','mysql');

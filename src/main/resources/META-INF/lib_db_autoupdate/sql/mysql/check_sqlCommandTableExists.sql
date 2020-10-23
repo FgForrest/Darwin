@@ -1,0 +1,1 @@
+SELECT * FROM T_DB_AUTOUPDATE_SQL WHERE patchId = null;

@@ -1,0 +1,6 @@
+ALTER TABLE `T_DOXX_FINANCIAL_MODE`
+  ADD COLUMN `charCode` VARCHAR(1) NOT NULL DEFAULT '';
+
+UPDATE `T_DOXX_FINANCIAL_MODE` SET `charCode` = 'F' where `id` = 1;
+UPDATE `T_DOXX_FINANCIAL_MODE` SET `charCode` = 'P' where `id` = 2;
+UPDATE `T_DOXX_FINANCIAL_MODE` SET `charCode` = 'H' where `id` = 3;

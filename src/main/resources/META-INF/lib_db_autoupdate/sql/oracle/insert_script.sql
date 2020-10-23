@@ -1,0 +1,1 @@
+INSERT INTO T_DB_AUTOUPDATE_SQL (id,patchId, statement, statementHash, processTime, finishedOn, exception) VALUES (SQ_T_DB_AUTOUPDATE_SQL.nextval,?,?,?,?,?,?);

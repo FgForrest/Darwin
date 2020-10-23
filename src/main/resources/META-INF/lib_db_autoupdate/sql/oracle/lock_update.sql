@@ -1,0 +1,1 @@
+update T_DB_AUTOUPDATE_LOCK set LEASE_UNTIL_DT = ? where PROCESS_TX = ? and UNLOCK_KEY_TX = ?

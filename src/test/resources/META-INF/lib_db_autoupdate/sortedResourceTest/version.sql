@@ -1,0 +1,1 @@
+select VERSION_TX from T_DB_AUTOUPDATE where COMPONENT_TX = ?;

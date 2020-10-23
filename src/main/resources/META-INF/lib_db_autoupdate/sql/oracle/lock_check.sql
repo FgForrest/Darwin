@@ -1,0 +1,1 @@
+select LEASE_UNTIL_DT from T_DB_AUTOUPDATE_LOCK where PROCESS_TX = ?; 

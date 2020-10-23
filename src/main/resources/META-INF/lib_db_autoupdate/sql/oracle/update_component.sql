@@ -1,0 +1,4 @@
+update T_DB_AUTOUPDATE set
+ MODIFIED_DT = SYSDATE,
+ VERSION_TX = ?
+where COMPONENT_TX = ?;
