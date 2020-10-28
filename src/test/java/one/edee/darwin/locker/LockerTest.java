@@ -121,17 +121,14 @@ public abstract class LockerTest extends AbstractDbAutoupdateTest {
 	}
 
 	@Test
-	public void testRenewLeaseWithRestorer() {
+	public void testRenewLeaseWithRestorer() throws ProcessIsLockedException {
 		final AtomicBoolean finished = new AtomicBoolean();
 		final AtomicInteger counter = new AtomicInteger();
 
 		String unlockKey = "";
-		LockRestorer lockRestorer = new LockRestorer() {
-			@Override
-			public boolean isFinished() {
-				counter.incrementAndGet();
-				return finished.get();
-			}
+		LockRestorer lockRestorer = () -> {
+			counter.incrementAndGet();
+			return finished.get();
 		};
 
 		try {

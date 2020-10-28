@@ -13,7 +13,6 @@ import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -67,7 +66,7 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	@Override
 	public Resource[] getSortedResourceList(Platform platform) {
 		final String normalizedPath = normalizePath(this.resourcePath, platform.getFolderName(), true);
-		final PathMatchingResourcePatternResolver resolver = new OC4JPathMatchingResourcePatternResolver(resourceLoader);
+		final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
 		return getResources(normalizedPath, resolver);
 	}
 
@@ -131,7 +130,7 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 				stringStartIndex = inString ? i : -1;
 				buffer.append(currentChar);
 			} else if(currentChar == SEMICOLON && !inString && !inComment) {
-				if(isLineDelimiter(content, i, currentChar, SEMICOLON)) {
+				if(isLineDelimiter(content, i, currentChar)) {
 					addQuery(result, buffer);
 					buffer.setLength(0);
 				} else {
@@ -280,65 +279,9 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 		return isDelimiter && isNotEscaped && (isNotDuplicatedAndInsideString || isTriplecatedInsideString);
 	}
 
-	private boolean isLineDelimiter(String content, int currentPos, char currentChar, char delimiterChar) {
+	private boolean isLineDelimiter(String content, int currentPos, char currentChar) {
 		char nextChar = currentPos + 1 < content.length() ? content.charAt(currentPos + 1) : '-';
-		return currentChar == delimiterChar && nextChar != delimiterChar;
-	}
-
-	/**
-	 * TODO JNO ... tohle možná odebrat?
-	 */
-	protected static class OC4JPathMatchingResourcePatternResolver extends PathMatchingResourcePatternResolver {
-
-		/**
-		 * Create a new PathMatchingResourcePatternResolver with a DefaultResourceLoader.
-		 * <p>ClassLoader access will happen via the thread context class loader.
-		 *
-		 * @see org.springframework.core.io.DefaultResourceLoader
-		 */
-		OC4JPathMatchingResourcePatternResolver() {
-			super();
-		}
-
-		/**
-		 * Create a new PathMatchingResourcePatternResolver with a DefaultResourceLoader.
-		 *
-		 * @param classLoader the ClassLoader to load classpath resources with,
-		 *                    or <code>null</code> for using the thread context class loader
-		 * @see org.springframework.core.io.DefaultResourceLoader
-		 */
-		OC4JPathMatchingResourcePatternResolver(ClassLoader classLoader) {
-			super(classLoader);
-		}
-
-		/**
-		 * Create a new PathMatchingResourcePatternResolver.
-		 * <p>ClassLoader access will happen via the thread context class loader.
-		 *
-		 * @param resourceLoader the ResourceLoader to load root directories and
-		 *                       actual resources with
-		 */
-		OC4JPathMatchingResourcePatternResolver(ResourceLoader resourceLoader) {
-			super(resourceLoader);
-		}
-
-		@Override
-		protected boolean isJarResource(Resource resource) throws IOException {
-			/**
-			 * SUPPORT FOR CPS RESOURCES - NOT REQUIRING TO HAVE CPS ON CLASSPATH
-			 */
-			if("com.fg.webapp.cps.v1.modules.spring.resource.StorageResource".equals(resource.getClass().getName())) {
-				return false;
-			}
-			if("com.fg.webapp.cps.v1.modules.spring.resource.TemplateResource".equals(resource.getClass().getName())) {
-				return false;
-			}
-			URL url = resource.getURL();
-			//hack for OC4J 10.1.3.X
-			if(url.getProtocol().equals("code-source") && url.getPath().contains(".jar!")) return true;
-			//for other rationally behaving servers
-			return super.isJarResource(resource);
-		}
+		return currentChar == DefaultResourceAccessor.SEMICOLON && nextChar != DefaultResourceAccessor.SEMICOLON;
 	}
 
 }
