@@ -27,11 +27,11 @@ public class ScriptableResourceAccessor extends DefaultResourceAccessor {
 	}
 
 	@Override
-    public String getTextContentFromResource(String resourceName) {
-		String text = super.getTextContentFromResource(resourceName);
+    public String getTextContentFromResource(String resourcePath) {
+		String text = super.getTextContentFromResource(resourcePath);
 		if (text == null) {
 			if (log.isWarnEnabled()) {
-				log.warn("Can not find resource: " + resourceName);
+				log.warn("Can not find resource: " + resourcePath);
 			}
 			return null;
 		} else {

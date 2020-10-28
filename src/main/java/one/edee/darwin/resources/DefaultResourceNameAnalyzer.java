@@ -1,30 +1,31 @@
 package one.edee.darwin.resources;
 
-import com.fg.commons.version.VersionDescriptor;
 import one.edee.darwin.model.Patch;
+import one.edee.darwin.model.version.VersionDescriptor;
 import org.springframework.core.io.Resource;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Default resource name version extractor.
- * Version patches must be named patch_version.extension - for example:
- * <p>
+ * Version patches names are expected to be in form of: patch_version.extension
+ * For example:
+ *
  * patch_1.0.0.sql
  * patch_2.0.sql
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
  */
 public class DefaultResourceNameAnalyzer implements ResourceNameAnalyzer {
-
     private static final long serialVersionUID = 3329089530167442837L;
     private static final Pattern VERSION_PATTERN = Pattern.compile("_(.*).sql$");
     private static final Pattern PLATFORM_AND_NAME_PATTERN = Pattern.compile("(.*)/(.*)");
 
     @Override
     public VersionDescriptor getVersionFromResource(Resource resource) {
-        final String fileName = resource.getFilename().toLowerCase();
+        final String fileName = Objects.requireNonNull(resource.getFilename()).toLowerCase();
         int startIndex = fileName.lastIndexOf('_');
         if (startIndex > -1) {
             int index = fileName.lastIndexOf('.');

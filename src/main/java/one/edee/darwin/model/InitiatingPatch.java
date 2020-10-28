@@ -1,11 +1,11 @@
 package one.edee.darwin.model;
 
-import one.edee.darwin.storage.AutoUpdatePersister;
+import one.edee.darwin.storage.DarwinStorage;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
- * This is Patch which work with DB. He automatic write him self to db, and take patchId from DB
+ * Specific type of the patch that is used to gather patch id from the database.
  *
  * @author Radek Salay, FG Forest a.s. 6/22/16.
  */
@@ -18,11 +18,13 @@ public class InitiatingPatch extends Patch {
      * @param detectedOn    time when was patch found on classpath
      * @param platform      for what platform patch is, for example MySQL
      */
-    public InitiatingPatch(String patchName, String componentName, Date detectedOn,
-                           String platform, AutoUpdatePersister autoUpdatePersister) {
+    public InitiatingPatch(String patchName, String componentName, LocalDateTime detectedOn,
+                           Platform platform, DarwinStorage darwinStorage) {
         super(
-                autoUpdatePersister.insertPatchToDatabase(patchName, componentName,
-                        detectedOn, platform).getPatchId(),
+                darwinStorage.insertPatchToDatabase(
+                        patchName, componentName,
+                        detectedOn, platform
+                ).getPatchId(),
                 patchName,
                 componentName,
                 detectedOn,

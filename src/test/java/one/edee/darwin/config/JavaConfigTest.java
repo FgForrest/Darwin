@@ -8,10 +8,10 @@ package one.edee.darwin.config;
 
 import com.fg.support.test.AbstractSpringTestCase;
 import com.fg.support.test.AnnotationHostConfigurableContextLoader;
-import one.edee.darwin.AutoUpdater;
-import one.edee.darwin.AutoUpdaterConfiguration;
-import one.edee.darwin.Locker;
+import one.edee.darwin.Darwin;
+import one.edee.darwin.locker.Locker;
 import one.edee.darwin.resources.ResourceAccessor;
+import one.edee.darwin.spring.DarwinConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,17 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(
-	classes = AutoUpdaterConfiguration.class,
+	classes = DarwinConfiguration.class,
 	loader = AnnotationHostConfigurableContextLoader.class
 )
 public class JavaConfigTest extends AbstractSpringTestCase {
-	@Autowired private AutoUpdater dbAutoUpdater;
+	@Autowired private Darwin dbDarwin;
 	@Autowired private Locker locker;
 	@Autowired private ResourceAccessor dbResourceAccessor;
 
 	@Test
 	public void JavaConfig_Setup_Ok() throws Exception {
-		assertNotNull(dbAutoUpdater);
+		assertNotNull(dbDarwin);
 		assertNotNull(locker);
 		assertNotNull(dbResourceAccessor);
 	}

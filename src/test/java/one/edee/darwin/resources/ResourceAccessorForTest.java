@@ -21,12 +21,12 @@ public class ResourceAccessorForTest extends DefaultResourceAccessor {
     }
 
     @Override
-    public Resource[] getSortedResourceList(String resourceName) {
-        Resource[] baseResources = super.getSortedResourceList(resourceName);
+    public Resource[] getSortedResourceList(String platform) {
+        Resource[] baseResources = super.getSortedResourceList(platform);
         Resource[] resources = null;
 
         if (resourcePathForPatch!=null) {
-            String normalizedPath = normalizePath(resourcePathForPatch, resourceName, true);
+            String normalizedPath = normalizePath(resourcePathForPatch, platform, true);
             PathMatchingResourcePatternResolver resolver = new OC4JPathMatchingResourcePatternResolver(resourceLoader);
 			resources = getResources(normalizedPath, resolver);
         }
@@ -41,20 +41,20 @@ public class ResourceAccessorForTest extends DefaultResourceAccessor {
 
     }
     @Override
-    public String getTextContentFromResource(String resourceName) {
+    public String getTextContentFromResource(String resourcePath) {
         try {
-            String s =super.getTextContentFromResource(resourceName);
+            String s =super.getTextContentFromResource(resourcePath);
             if (s !=null) {
                 return s;
             }
             throw new RuntimeException();
         } catch (Exception e) {
-            String normalizedPath = normalizePath(resourcePathForPatch, resourceName, false);
+            String normalizedPath = normalizePath(resourcePathForPatch, resourcePath, false);
             //base path may contain fe: classpath*:/directory ... so when looking up for specific resource, asterisk must be removed
             normalizedPath = normalizedPath.replaceAll("\\*", "");
             Resource resource = resourceLoader.getResource(normalizedPath);
 
-            return readResource(resourceName, normalizedPath, resource);
+            return readResource(resourcePath, normalizedPath, resource);
         }
     }
 }

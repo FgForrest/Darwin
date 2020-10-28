@@ -1,11 +1,11 @@
 package one.edee.darwin.storage;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.apachecommons.CommonsLog;
+import one.edee.darwin.model.Platform;
 import one.edee.darwin.resources.DefaultResourceAccessor;
 import one.edee.darwin.resources.ResourceAccessor;
-import one.edee.darwin.utils.JdbcUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.ResourceLoader;
@@ -14,34 +14,29 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
+import java.util.Objects;
 
 /**
  * Abstract ancestor for database oriented storage.
  *
- * @author Jan Novotnďż˝, FG Forrest a.s. (c) 2007
- * @version $Id$
+ * @author Jan Novotný, FG Forrest a.s. (c) 2007
  */
-@Data
+@CommonsLog
 public abstract class AbstractDatabaseStorage implements InitializingBean, ResourceLoaderAware {
-    public static final String MYSQL = "mysql";
-    public static final String ORACLE = "oracle";
-    public static final String H2 = "h2";
-    public static final String MSSQL = "mssql";
-    private static final Log log = LogFactory.getLog(AbstractDatabaseStorage.class);
     protected final DefaultResourceAccessor dbResourceAccessor = new DefaultResourceAccessor();
-    protected ResourceAccessor resourceAccessor;
-    protected PlatformTransactionManager transactionManager;
-    protected JdbcTemplate jdbcTemplate;
-    private String platform;
+    @Getter @Setter protected ResourceAccessor resourceAccessor;
+    @Getter @Setter protected PlatformTransactionManager transactionManager;
+    @Getter protected JdbcTemplate jdbcTemplate;
+    private Platform platform;
+
+    @Override
+    public void afterPropertiesSet() {
+        Assert.notNull(jdbcTemplate, "Darwin needs JdbcTemplate to be not null!");
+        Assert.notNull(resourceAccessor, "Darwin needs dbResourceAccessor to be not null!");
+    }
 
     public void setDataSource(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        Assert.notNull(jdbcTemplate, "AutoUpdater needs JdbcTemplate to be not null!");
-        Assert.notNull(resourceAccessor, "AutoUpdater needs dbResourceAccessor to be not null!");
     }
 
 	@Override
@@ -49,9 +44,11 @@ public abstract class AbstractDatabaseStorage implements InitializingBean, Resou
 		this.dbResourceAccessor.setResourceLoader(resourceLoader);
 	}
 
-	public String getPlatform() {
+	public Platform getPlatform() {
         if (platform == null) {
-            platform = JdbcUtils.getPlatformFromJdbcUrl(jdbcTemplate.getDataSource());
+            platform = Platform.getPlatformFromJdbcUrl(
+                    Objects.requireNonNull(jdbcTemplate.getDataSource())
+            );
         }
         return platform;
     }

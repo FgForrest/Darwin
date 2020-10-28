@@ -1,7 +1,7 @@
 package one.edee.darwin.integrate;
 
 import one.edee.darwin.AbstractDbAutoupdateTest;
-import one.edee.darwin.AutoUpdaterBuilder;
+import one.edee.darwin.DarwinBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @ContextConfiguration(
 		locations = {
-				"/META-INF/lib_db_autoupdate/spring/datasource-config.xml",
-				"/META-INF/lib_db_autoupdate/spring/db-autoupdate-config.xml"
+				"/META-INF/darwin/spring/datasource-config.xml",
+				"/META-INF/darwin/spring/db-autoupdate-config.xml"
 		}
 )
 @ActiveProfiles("MYSQL")
@@ -29,8 +29,8 @@ public class IntegrationTestDuplicateCommands extends AbstractDbAutoupdateTest {
 
 	@Test
 	public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() throws Exception {
-		new AutoUpdaterBuilder(applicationContext, "duplicate", "1.1")
-				.withResourcePath("/META-INF/lib_db_autoupdate/sql-test/occurence/correct/")
+		new DarwinBuilder(applicationContext, "duplicate", "1.1")
+				.withResourcePath("/META-INF/darwin/sql-test/occurence/correct/")
 				.build()
 				.apply();
 

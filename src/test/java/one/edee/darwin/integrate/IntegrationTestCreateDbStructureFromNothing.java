@@ -1,8 +1,8 @@
 package one.edee.darwin.integrate;
 
 import one.edee.darwin.AbstractDbAutoupdateTest;
-import one.edee.darwin.AutoUpdater;
-import one.edee.darwin.AutoUpdaterInfo;
+import one.edee.darwin.Darwin;
+import one.edee.darwin.model.SchemaVersion;
 import one.edee.darwin.resources.DefaultResourceAccessor;
 import one.edee.darwin.utils.AutoupdateTestHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -21,10 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DirtiesContext
 public abstract class IntegrationTestCreateDbStructureFromNothing extends AbstractDbAutoupdateTest {
 	@Autowired ApplicationContext applicationContext;
-    @Autowired AutoUpdater autoUpdater;
+    @Autowired Darwin darwin;
 
     /**
-     * this test is about creating DB structure from state where don't exit any table. On end {@link AutoUpdater#afterPropertiesSet()} exist complete DB structure.
+     * this test is about creating DB structure from state where don't exit any table. On end {@link Darwin#afterPropertiesSet()} exist complete DB structure.
      *
      * @throws Exception
      */
@@ -35,28 +35,28 @@ public abstract class IntegrationTestCreateDbStructureFromNothing extends Abstra
 		//patch and SQL tables should not exists
 		assertFalse(existsPatchAndSqlTableNoCache());
 		//run autoupdater
-		autoUpdater.afterPropertiesSet();
+		darwin.afterPropertiesSet();
 		//check patch and SQL table exists
         assertTrue(existsPatchAndSqlTableNoCache());
     }
 
 	/**
-	 * this test is about creating DB structure from state where don't exit any table. On end {@link AutoUpdater#afterPropertiesSet()} exist complete DB structure.
+	 * this test is about creating DB structure from state where don't exit any table. On end {@link Darwin#afterPropertiesSet()} exist complete DB structure.
 	 *
 	 * @throws Exception
 	 */
 	@Test
 	public void IntegrationTest_EmptyDatabase_AutoUpdaterInitializesItsDataStructureEntirelyFromDefaultConfiguration() throws Exception {
-		AutoUpdater autoUpdater = new AutoUpdater();
-		autoUpdater.setApplicationContext(applicationContext);
-		autoUpdater.setComponentDescriptor(new AutoUpdaterInfo("test_component", "1.0"));
-		autoUpdater.setResourceAccessor(new DefaultResourceAccessor(applicationContext, "UTF-8", "classpath:/com/fg/autoupdate/utils/"));
+		Darwin darwin = new Darwin();
+		darwin.setApplicationContext(applicationContext);
+		darwin.setComponentDescriptor(new SchemaVersion("test_component", "1.0"));
+		darwin.setResourceAccessor(new DefaultResourceAccessor(applicationContext, "UTF-8", "classpath:/com/fg/autoupdate/utils/"));
 		//clean entire DB
 		AutoupdateTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
 		//patch and SQL tables should not exists
 		assertFalse(existsPatchAndSqlTableNoCache());
 		//run autoupdater
-		autoUpdater.afterPropertiesSet();
+		darwin.afterPropertiesSet();
 		//check patch and SQL table exists
 		assertTrue(existsPatchAndSqlTableNoCache());
 	}

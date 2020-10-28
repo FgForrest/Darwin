@@ -4,9 +4,9 @@ package one.edee.darwin.exception;
  * Exception is thrown when connection to the database is needed and not achieved.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
 public class DatabaseConnectionException extends RuntimeException {
+	private static final long serialVersionUID = 6801075646512890576L;
 
 	/**
 	 * Constructs a new runtime exception with <code>null</code> as its

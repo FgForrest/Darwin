@@ -1,21 +1,20 @@
 package one.edee.darwin.resources;
 
 /**
- * Distinguishes between resources in different modes.
+ * Implementation of this interface filters patches according their {@link PatchType}.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
 public interface ResourceMatcher {
 
 	/**
-	 * This method compare patch if he corresponds with presumed mode.
+	 * This method compare patch if he corresponds with presumed type.
 	 *
-	 * @param mode mode of patch we presumed.
-	 * @param patchName
-	 * @return return true if is patch corresponds mode, or false if not.
-	 * @see {@link PatchMode}
+	 * @param type type of patch we presumed.
+	 * @param patchName file name of the patch
+	 * @return return true if is patch corresponds type, or false if not
+	 * @see PatchType
 	 */
-    boolean isResourceAcceptable(PatchMode mode, String patchName);
+    boolean isResourceAcceptable(PatchType type, String patchName);
 
 }

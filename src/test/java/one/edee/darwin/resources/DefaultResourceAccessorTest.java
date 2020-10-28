@@ -1,7 +1,6 @@
 package one.edee.darwin.resources;
 
 import one.edee.darwin.AbstractDbAutoupdateTest;
-import one.edee.darwin.utils.StringProcessor;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,40 +64,6 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
         assertEquals("INSERT INTO \"T_MAIL_NEWSLETTER_BODY\" (id, idNewsletter, partName, bodyPart) VALUES (1, 1, 'question', 'How it''s goin'' bro?')", statements.get(0));
         assertEquals("INSERT INTO \"T_MAIL_NEWSLETTER_BODY\" (id, idNewsletter, partName, bodyPart) VALUES (2, 1, 'answer', 'Sweet as hell!!!')", statements.get(1));
     }
-
-	@Test
-	public void testRemoveComments() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented.sql");
-		assertNotNull(content);
-		String processedContent = StringProcessor.removeCommentsFromContent(content);
-		assertTrue(processedContent.contains("select ME from T_DB_DRUNKPEOPLE;"));
-		assertTrue(processedContent.contains("select MEASWELL from T_DB_STONED"));
-		assertTrue(processedContent.contains("select MEANDMYFRIENDS from T_DB_DRUNKSTONEDPEOPLE;"));
-		assertTrue(!processedContent.contains("firstComment"));
-		assertTrue(!processedContent.contains("secondComment"));
-		assertTrue(!processedContent.contains("fourthComment"));
-		assertTrue(!processedContent.contains("fifthComment"));
-	}
-
-	@Test
-	public void testRemoveCommentsHashContent() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented2.sql");
-		assertNotNull(content);
-		String processedContent = StringProcessor.removeCommentsFromContent(content);
-		assertTrue(!processedContent.contains("# firstComment"));
-		assertTrue(!processedContent.contains("-- secondComment"));
-		assertTrue(!processedContent.contains("/* thirdComment */"));
-		assertTrue(!processedContent.contains("# fifthComment"));
-		assertTrue(!processedContent.replace("\r\n","\n").contains("/*\n" +
-                "sixthComment\n" +
-                "*/"));
-		assertTrue(processedContent.contains("'#E4F0F8'"));
-		if (processedContent.replace("\r\n","\n").contains("as\n")) {
-			assertTrue(processedContent.replace("\r\n","\n").contains("as\n"));
-		} else {
-			assertTrue(processedContent.replace("\r\n","\n").contains("as\n"));
-		}
-	}
 
 	@Test
 	public void testKeepSemicolonsInTrigger() {
@@ -316,7 +281,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
 
     @Test
     public void testAlterInsert() throws Exception {
-        ClassPathResource sqlResource = new ClassPathResource("/META-INF/lib_db_autoupdate/sql-test/upgrade/mysql/alter-insert.sql");
+        ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/alter-insert.sql");
 
         String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
         List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
@@ -328,7 +293,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
      */
     @Test
     public void testTokenizeVeryLargeSQLScript() throws Exception {
-        ClassPathResource sqlResource = new ClassPathResource("/META-INF/lib_db_autoupdate/sql-test/upgrade/mysql/verylarge.sql");
+        ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/verylarge.sql");
         String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
         List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(12185, queries.size());
@@ -337,7 +302,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
     @DirtiesContext
     @Test
     public void testGetSortedResourceList() throws Exception {
-        dbAutoUpdateResourceAccessor.setResourcePath("/META-INF/lib_db_autoupdate/sortedResourceTest");
+        dbAutoUpdateResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
         Resource[] files = dbAutoUpdateResourceAccessor.getSortedResourceList("");
         assertNotNull(files);
         assertTrue(files.length > 4);
@@ -347,7 +312,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
 
     @Test
     public void testTokenizeSQLScriptContentWithCommentInsideSQL() throws Exception {
-        ClassPathResource sqlResource = new ClassPathResource("/META-INF/lib_db_autoupdate/sql-test/upgrade/mysql/commentInsideSqlScript.sql");
+        ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/commentInsideSqlScript.sql");
         String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
         List<String> result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(1, result.size());

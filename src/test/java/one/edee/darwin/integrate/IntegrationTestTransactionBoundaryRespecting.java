@@ -1,7 +1,7 @@
 package one.edee.darwin.integrate;
 
 import one.edee.darwin.AbstractDbAutoupdateTest;
-import one.edee.darwin.AutoUpdaterBuilder;
+import one.edee.darwin.DarwinBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @ContextConfiguration(
 		locations = {
-				"/META-INF/lib_db_autoupdate/spring/datasource-config.xml",
-				"/META-INF/lib_db_autoupdate/spring/db-autoupdate-config.xml"
+				"/META-INF/darwin/spring/datasource-config.xml",
+				"/META-INF/darwin/spring/db-autoupdate-config.xml"
 		}
 )
 @ActiveProfiles("MYSQL")
@@ -32,8 +32,8 @@ public class IntegrationTestTransactionBoundaryRespecting extends AbstractDbAuto
 	public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() throws Exception {
 		try {
 			// this will apply init variables and stops on ERROR!
-			new AutoUpdaterBuilder(applicationContext, "duplicate", "1.1")
-					.withResourcePath("/META-INF/lib_db_autoupdate/sql-test/occurence/wrong/")
+			new DarwinBuilder(applicationContext, "duplicate", "1.1")
+					.withResourcePath("/META-INF/darwin/sql-test/occurence/wrong/")
 					.build()
 					.apply();
 		} catch (BadSqlGrammarException ignored) {
@@ -42,8 +42,8 @@ public class IntegrationTestTransactionBoundaryRespecting extends AbstractDbAuto
 
 		// this will try to continue after ERROR! has been removed but it needs to reinit variables that
 		// successfully passed in first run
-		new AutoUpdaterBuilder(applicationContext, "duplicate", "1.1")
-				.withResourcePath("/META-INF/lib_db_autoupdate/sql-test/occurence/correct/")
+		new DarwinBuilder(applicationContext, "duplicate", "1.1")
+				.withResourcePath("/META-INF/darwin/sql-test/occurence/correct/")
 				.build()
 				.apply();
 

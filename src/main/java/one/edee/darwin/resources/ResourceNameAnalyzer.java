@@ -1,7 +1,7 @@
 package one.edee.darwin.resources;
 
-import com.fg.commons.version.VersionDescriptor;
 import one.edee.darwin.model.Patch;
+import one.edee.darwin.model.version.VersionDescriptor;
 import org.springframework.core.io.Resource;
 
 import java.io.Serializable;

@@ -1,11 +1,9 @@
 package one.edee.darwin.storage;
 
+import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.model.SqlCommand;
-import one.edee.darwin.storage.AutoUpdatePersister.SqlScriptStatus;
-import one.edee.darwin.utils.StringProcessor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import one.edee.darwin.storage.DarwinStorage.SqlScriptStatus;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -15,19 +13,20 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Default database storage updater.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
+@CommonsLog
 public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage implements StorageUpdater {
-    private static final Log log = LogFactory.getLog(DefaultDatabaseStorageUpdater.class);
 	private final StorageChecker storageChecker;
 
 	public DefaultDatabaseStorageUpdater(StorageChecker storageChecker) {
@@ -36,7 +35,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 	}
 
 	@Override
-    public void executeScript(final String resourcePath, final String componentName, final AutoUpdatePersister autoUpdatePersister, final StorageChecker storageChecker) {
+    public void executeScript(final String resourcePath, final String componentName, final DarwinStorage darwinStorage, final StorageChecker storageChecker) {
         if (transactionManager != null) {
             //though DDL commands makes implicit commit - do this in transaction in order to make Spring
             //return always the same connection to the database to share session among SQL commands
@@ -44,12 +43,12 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
                     new TransactionCallbackWithoutResult() {
                         @Override
                         protected void doInTransactionWithoutResult(TransactionStatus status) {
-                            performUpdate(resourcePath, componentName, autoUpdatePersister);
+                            performUpdate(resourcePath, componentName, darwinStorage);
                         }
                     }
             );
         } else {
-            performUpdate(resourcePath, componentName, autoUpdatePersister);
+            performUpdate(resourcePath, componentName, darwinStorage);
         }
     }
 
@@ -61,42 +60,42 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
      * @param resourcePath  path to concrete patch
      * @param componentName name of updated component
      */
-    private void performUpdate(String resourcePath, String componentName, AutoUpdatePersister autoUpdatePersister) {
+    private void performUpdate(String resourcePath, String componentName, DarwinStorage darwinStorage) {
         final List<String> sqlCommands = resourceAccessor.getTokenizedSQLScriptContentFromResource(resourcePath);
-        final Patch patch = autoUpdatePersister.getPatchByResourcePath(resourcePath, componentName);
+        final Patch patch = darwinStorage.getPatchByResourcePath(resourcePath, componentName);
 		final boolean patchAndSqlTableExists = storageChecker.existPatchAndSqlTable();
 
 		long start = System.currentTimeMillis();
 
 		final Map<String, Integer> executedCommands = new HashMap<>(sqlCommands.size());
         for (String sqlCommand : sqlCommands) {
-			final Integer occurence = executedCommands.get(sqlCommand);
-			final Integer newOccurence = occurence == null ? 1 : occurence + 1;
-			executedCommands.put(sqlCommand, newOccurence);
-	        final SqlScriptStatus executionStatus = patchAndSqlTableExists && patch.getPatchId()!=null ? autoUpdatePersister.wasSqlCommandAlreadyExecuted(patch.getPatchId(), sqlCommand, newOccurence) : SqlScriptStatus.NOT_EXECUTED;
+			final Integer occurrence = executedCommands.get(sqlCommand);
+			final Integer newOccurrence = occurrence == null ? 1 : occurrence + 1;
+			executedCommands.put(sqlCommand, newOccurrence);
+	        final SqlScriptStatus executionStatus = patchAndSqlTableExists && patch.getPatchId()!=null ? darwinStorage.wasSqlCommandAlreadyExecuted(patch.getPatchId(), sqlCommand, newOccurrence) : SqlScriptStatus.NOT_EXECUTED;
 	        if (executionStatus == SqlScriptStatus.EXECUTED_FINISHED) {
-                log.info("Skipping (was already executed before) - occurrence " + newOccurence + ":\n" + sqlCommand);
+                log.info("Skipping (was already executed before) - occurrence " + newOccurrence + ":\n" + sqlCommand);
             } else {
                 log.info("Executing:\n" + sqlCommand);
-                executeSqlCommand(patch, sqlCommand, autoUpdatePersister, executionStatus);
+                executeSqlCommand(patch, sqlCommand, darwinStorage, executionStatus);
             }
         }
 
         if (patchAndSqlTableExists) {
 			long stop = System.currentTimeMillis();
 			patch.setProcessTime((int)(stop - start));
-			patch.setFinishedOn(new Date());
-			autoUpdatePersister.markPatchAsFinished(patch);
+			patch.setFinishedOn(LocalDateTime.now());
+			darwinStorage.markPatchAsFinished(patch);
 		}
     }
 
     /**
      * Executes single SQL command.
      */
-    private void executeSqlCommand(final Patch patch, final String sqlStatement, final AutoUpdatePersister autoUpdatePersister, SqlScriptStatus executionStatus) {
+    private void executeSqlCommand(final Patch patch, final String sqlStatement, final DarwinStorage darwinStorage, SqlScriptStatus executionStatus) {
         final long startScript = System.currentTimeMillis();
         try {
-            final String sqlCommandToExecute = StringProcessor.removeCommentsFromContent(sqlStatement);
+            final String sqlCommandToExecute = removeCommentsFromContent(sqlStatement);
 
             // do this before command is executed
 			// in case command triggers implicit commit we need this information in database
@@ -106,7 +105,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 					// finished date is set intentionally - if this SQL statement passes and contains implicit commit
 					// the date must be already present in database
 					// if implicit commit will not occur and exception is thrown another update in catch clause will reset finished date to NULL again
-					autoUpdatePersister.insertSqlScriptToDB(
+					darwinStorage.insertSqlScriptToDB(
 							patch,
 							new SqlCommand(patch.getPatchId(), sqlStatement, 0, new Date(), null)
 					);
@@ -117,7 +116,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
             jdbcTemplate.execute(sqlCommandToExecute);
 
 	        if (patch.isInDb()) {
-		        autoUpdatePersister.updateSqlScriptInDB(patch, new SqlCommand(patch.getPatchId(),
+		        darwinStorage.updateSqlScriptInDB(patch, new SqlCommand(patch.getPatchId(),
 				        sqlStatement, System.currentTimeMillis() - startScript, new Date(), null));
 	        }
 
@@ -138,7 +137,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 				            		txTemplate.execute(new TransactionCallbackWithoutResult() {
 							            @Override
 							            protected void doInTransactionWithoutResult(TransactionStatus status) {
-								            autoUpdatePersister.updateSqlScriptInDB(
+								            darwinStorage.updateSqlScriptInDB(
 										            patch, new SqlCommand(patch.getPatchId(),
 												            sqlStatement, System.currentTimeMillis() - startScript,
 												            null, ex)
@@ -154,5 +153,21 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
             throw ex;
         }
     }
+
+	/**
+	 * Removes comments from content
+	 *
+	 * @param content to be precessed
+	 * @return clarified content without comments
+	 */
+	protected String removeCommentsFromContent(String content) {
+		if(content==null) {
+			return null;
+		}
+		String processed = Pattern.compile("^\\s*+#.+?$", Pattern.MULTILINE).matcher(content).replaceAll("");
+		processed = Pattern.compile("^\\s*+--.+?$", Pattern.MULTILINE).matcher(processed).replaceAll("");
+		processed = Pattern.compile("^\\s*+/\\*.+?\\*/", Pattern.DOTALL | Pattern.MULTILINE).matcher(processed).replaceAll("");
+		return processed;
+	}
 
 }

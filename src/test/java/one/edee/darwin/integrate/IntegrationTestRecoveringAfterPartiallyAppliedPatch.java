@@ -2,10 +2,10 @@ package one.edee.darwin.integrate;
 
 
 import one.edee.darwin.AbstractDbAutoupdateTest;
-import one.edee.darwin.AutoUpdater;
+import one.edee.darwin.Darwin;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.resources.ResourceAccessorForTest;
-import one.edee.darwin.storage.AutoUpdatePersister;
+import one.edee.darwin.storage.DarwinStorage;
 import one.edee.darwin.storage.DefaultDatabaseStorageUpdater;
 import one.edee.darwin.utils.AutoupdateTestHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @DirtiesContext
 public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extends AbstractDbAutoupdateTest {
     @Autowired
-    AutoUpdater autoUpdater;
+    Darwin darwin;
     String platform = "";
 
     public IntegrationTestRecoveringAfterPartiallyAppliedPatch(String platform) {
@@ -47,26 +47,26 @@ public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extend
 		applyBrokenPatch();
 
 		final Patch brokenPatch = new Patch(0, "patch_1.5.sql", "lib_db_autoupdate", new Date(), platform, null);
-		final AutoUpdatePersister autoUpdatePersister = autoUpdater.getAutoUpdatePersister();
+		final DarwinStorage darwinStorage = darwin.getDarwinStorage();
 
 		//broken patch evidence should be present in DB structure
-		assertPatchNotFinishedInDb(autoUpdatePersister, brokenPatch);
+		assertPatchNotFinishedInDb(darwinStorage, brokenPatch);
 
 		//switch resource path to the folder where the same patch has correct contents
-        ((ResourceAccessorForTest) autoUpdater.getResourceAccessor()).setResourcePathForPatch("/META-INF/lib_db_autoupdate/sql-test/" + platform + "EstablishmentAfterFailSql/withRightSql/");
+        ((ResourceAccessorForTest) darwin.getResourceAccessor()).setResourcePathForPatch("/META-INF/darwin/sql-test/" + platform + "EstablishmentAfterFailSql/withRightSql/");
 
 		//retry autoupdate
-        autoUpdater.afterPropertiesSet();
+        darwin.afterPropertiesSet();
 
 		//check last patch SQL command was successfully applied
 		assertPatchIsCompleted();
 		//check that patch is marked as finished
-		assertTrue(autoUpdatePersister.isPatchFinishedInDb(brokenPatch));
+		assertTrue(darwinStorage.isPatchFinishedInDb(brokenPatch));
     }
 
 	@AfterEach
     public void tearDown() throws Exception {
-        DefaultDatabaseStorageUpdater d = (DefaultDatabaseStorageUpdater) autoUpdater.getStorageUpdater();
+        DefaultDatabaseStorageUpdater d = (DefaultDatabaseStorageUpdater) darwin.getStorageUpdater();
 		final JdbcTemplate jdbcTemplate = d.getJdbcTemplate();
 		AutoupdateTestHelper.deleteAllInfrastructuralPages(jdbcTemplate);
         jdbcTemplate.execute("DROP TABLE IF EXISTS TEST");
@@ -79,8 +79,8 @@ public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extend
      */
     private void applyBrokenPatch() throws Exception {
 		try {
-			((ResourceAccessorForTest) autoUpdater.getResourceAccessor()).setResourcePathForPatch("/META-INF/lib_db_autoupdate/sql-test/" + platform + "EstablishmentAfterFailSql/withWrongSql/");
-			autoUpdater.afterPropertiesSet();
+			((ResourceAccessorForTest) darwin.getResourceAccessor()).setResourcePathForPatch("/META-INF/darwin/sql-test/" + platform + "EstablishmentAfterFailSql/withWrongSql/");
+			darwin.afterPropertiesSet();
 			fail("Exception expected here.");
 		} catch (BadSqlGrammarException ignored) {
 			//exception is anticipated
@@ -88,7 +88,7 @@ public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extend
     }
 
 	private void assertPatchIsCompleted() throws SQLException {
-		DefaultDatabaseStorageUpdater updater = (DefaultDatabaseStorageUpdater) autoUpdater.getStorageUpdater();
+		DefaultDatabaseStorageUpdater updater = (DefaultDatabaseStorageUpdater) darwin.getStorageUpdater();
 		assertTrue(updater.getJdbcTemplate().getDataSource().getConnection().getMetaData().getTables(null, null, "TEST", null).next());
 	}
 }

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+		<property name="targetDataSource" ref="dataSourceImpl"/>
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSourceImpl"/>
+	</bean>
+
+	<bean id="dbAutoUpdateResourceAccessor4Test" class="one.edee.darwin.resources.DefaultResourceAccessor">
+		<property name="resourcePath" value="classpath:/META-INF/lib_db_autoupdate/sql-test/upgrade/"/>
+	</bean>
+
+	<bean id="cpsModuleScheduledExecutor"
+	      class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean"/>
+
+	<bean id="databaseStorageUpdater" class="one.edee.darwin.storage.DefaultDatabaseStorageUpdater">
+		<constructor-arg ref="defaultDatabaseStorageChecker"/>
+		<property name="dataSource" ref="dataSource"/>
+		<property name="transactionManager" ref="transactionManager"/>
+		<property name="resourceAccessor">
+			<bean class="one.edee.darwin.resources.DefaultResourceAccessor"/>
+		</property>
+		<property name="jdbcTemplate">
+			<bean class="org.springframework.jdbc.core.JdbcTemplate">
+				<property name="dataSource" ref="dataSource"/>
+			</bean>
+		</property>
+	</bean>
+	<bean id="defaultDatabaseAutoUpdatePersister" class="one.edee.darwin.storage.DefaultDatabaseDarwinStorage">
+		<constructor-arg>
+			<bean class="one.edee.darwin.resources.DefaultResourceNameAnalyzer"/>
+		</constructor-arg>
+		<constructor-arg ref="defaultDatabaseStorageChecker"/>
+		<property name="dataSource" ref="dataSource"/>
+		<property name="transactionManager" ref="transactionManager"/>
+		<property name="resourceAccessor">
+			<bean class="one.edee.darwin.resources.DefaultResourceAccessor"/>
+		</property>
+		<property name="jdbcTemplate">
+			<bean class="org.springframework.jdbc.core.JdbcTemplate">
+				<property name="dataSource" ref="dataSource"/>
+			</bean>
+		</property>
+	</bean>
+	<bean id="defaultDatabaseStorageChecker" class="one.edee.darwin.storage.DefaultDatabaseStorageChecker">
+		<constructor-arg>
+			<bean class="one.edee.darwin.resources.ResourcePatchMediator">
+				<constructor-arg index="0">
+					<bean class="one.edee.darwin.resources.DefaultResourceMatcher"/>
+				</constructor-arg>
+				<constructor-arg index="1">
+					<bean class="one.edee.darwin.resources.DefaultResourceNameAnalyzer"/>
+				</constructor-arg>
+			</bean>
+		</constructor-arg>
+		<property name="dataSource" ref="dataSource"/>
+		<property name="transactionManager" ref="transactionManager"/>
+		<property name="resourceAccessor">
+			<bean class="one.edee.darwin.resources.DefaultResourceAccessor"/>
+		</property>
+		<property name="jdbcTemplate">
+			<bean class="org.springframework.jdbc.core.JdbcTemplate">
+				<property name="dataSource" ref="dataSource"/>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="jdbcTemplateTest" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+	<beans profile="MYSQL">
+		<bean id="dataSourceImpl" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+			<property name="driverClass" value="${jdbc.driver.mysql}"/>
+			<property name="jdbcUrl" value="${jdbc.url.mysql}"/>
+			<property name="user" value="${jdbc.user.mysql}"/>
+			<property name="password" value="${jdbc.password.mysql}"/>
+			<property name="maxPoolSize" value="5"/>
+			<property name="maxConnectionAge" value="10000"/>
+			<property name="autoCommitOnClose" value="true"/>
+			<property name="debugUnreturnedConnectionStackTraces" value="true"/>
+			<property name="unreturnedConnectionTimeout" value="5000"/>
+		</bean>
+	</beans>
+
+	<beans profile="ORACLE">
+		<bean id="dataSourceImpl" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+			<property name="driverClass" value="${jdbc.driver.oracle}"/>
+			<property name="jdbcUrl" value="${jdbc.url.oracle}"/>
+			<property name="user" value="${jdbc.user.oracle}"/>
+			<property name="password" value="${jdbc.password.oracle}"/>
+			<property name="maxPoolSize" value="2"/>
+			<property name="maxConnectionAge" value="10000"/>
+			<property name="autoCommitOnClose" value="true"/>
+			<property name="debugUnreturnedConnectionStackTraces" value="true"/>
+			<property name="unreturnedConnectionTimeout" value="5000"/>
+		</bean>
+	</beans>
+
+	<beans profile="H2">
+		<bean id="dataSourceImpl" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+			<property name="driverClass" value="${jdbc.driver.h2}"/>
+			<property name="jdbcUrl" value="${jdbc.url.h2}"/>
+			<property name="user" value="${jdbc.user.h2}"/>
+			<property name="password" value="${jdbc.password.h2}"/>
+			<property name="maxPoolSize" value="2"/>
+			<property name="maxConnectionAge" value="10000"/>
+			<property name="autoCommitOnClose" value="true"/>
+			<property name="debugUnreturnedConnectionStackTraces" value="true"/>
+			<property name="unreturnedConnectionTimeout" value="5000"/>
+		</bean>
+	</beans>
+</beans>
+

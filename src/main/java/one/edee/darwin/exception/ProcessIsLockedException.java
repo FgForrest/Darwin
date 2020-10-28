@@ -1,12 +1,13 @@
 package one.edee.darwin.exception;
 
 /**
- * Exception is thrown, when process tries to leaseLock that was leased by another thread, and is not released yet.
+ * Exception is thrown, when process tries to lease lock that was leased by another thread, and is not released yet.
+ * This exception is expected and external code must cope with it.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
 public class ProcessIsLockedException extends Exception {
+	private static final long serialVersionUID = -1510599890915723448L;
 
 	public ProcessIsLockedException() {
 		super();

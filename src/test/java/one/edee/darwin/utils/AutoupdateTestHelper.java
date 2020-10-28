@@ -1,9 +1,9 @@
 package one.edee.darwin.utils;
 
-import one.edee.darwin.AutoUpdater;
+import one.edee.darwin.Darwin;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.storage.AbstractDatabaseStorage;
-import one.edee.darwin.storage.AutoUpdatePersister;
+import one.edee.darwin.storage.DarwinStorage;
 import one.edee.darwin.storage.DefaultDatabaseStorageUpdater;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,20 +18,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class AutoupdateTestHelper {
 
-	public static void assertPatchNotPresentInDb(AutoUpdatePersister autoUpdatePersister, Patch patch) {
-		assertFalse(autoUpdatePersister.isPatchFinishedInDb(patch));
+	public static void assertPatchNotPresentInDb(DarwinStorage darwinStorage, Patch patch) {
+		assertFalse(darwinStorage.isPatchFinishedInDb(patch));
 	}
 
-	public static void assertPatchFinishedInDb(AutoUpdatePersister autoUpdatePersister, Patch patch) {
-		assertTrue(autoUpdatePersister.isPatchFinishedInDb(patch));
+	public static void assertPatchFinishedInDb(DarwinStorage darwinStorage, Patch patch) {
+		assertTrue(darwinStorage.isPatchFinishedInDb(patch));
 	}
 
-	public static void assertPatchNotFinishedInDb(AutoUpdatePersister autoUpdatePersister, Patch patch) {
-		assertFalse(autoUpdatePersister.isPatchFinishedInDb(patch));
+	public static void assertPatchNotFinishedInDb(DarwinStorage darwinStorage, Patch patch) {
+		assertFalse(darwinStorage.isPatchFinishedInDb(patch));
 	}
 
-	public static void deleteAllInfrastructuralPages(AutoUpdater autoUpdater) {
-		DefaultDatabaseStorageUpdater updater = (DefaultDatabaseStorageUpdater) autoUpdater.getStorageUpdater();
+	public static void deleteAllInfrastructuralPages(Darwin darwin) {
+		DefaultDatabaseStorageUpdater updater = (DefaultDatabaseStorageUpdater) darwin.getStorageUpdater();
 		final JdbcTemplate jdbcTemplate = updater.getJdbcTemplate();
 		deleteAllInfrastructuralPages(jdbcTemplate);
 	}

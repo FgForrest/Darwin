@@ -1,15 +1,17 @@
 package one.edee.darwin.locker;
 
 /**
- *  Provider information about process which want lock and can renew a lock. 
+ * Provides information about process state. Allows to check whether the process already finished at any time from the outside
+ * environment of the running process.
  *
  * @author Michal Kolesnac, FG Forrest a.s. (c) 2009
- * @version $Id$
  */
 public interface LockRestorer {
+
 	/**
-	 * Get process status. If process was finished return true else return false;
-	 * @return true or false
+	 * Get process status. If process was finished return true else return false.
+	 *
+	 * @return true when process is finished
 	 */
     boolean isFinished();
 }

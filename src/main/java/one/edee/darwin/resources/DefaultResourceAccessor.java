@@ -1,10 +1,10 @@
 package one.edee.darwin.resources;
 
 import lombok.Data;
+import lombok.extern.apachecommons.CommonsLog;
+import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.ResourceVersionComparator;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -14,21 +14,19 @@ import org.springframework.util.Assert;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- * Description
+ * Default implementation of {@link ResourceAccessor}.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
 @Data
+@CommonsLog
 public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAccessor {
-	private static final Log log = LogFactory.getLog(DefaultResourceAccessor.class);
 	private static final String DESCRIPTOR_FILE = "descriptor.txt";
 	private static final char SEMICOLON = ';';
 	private static final char SINGLE_APOSTROPHE = '\'';
@@ -41,10 +39,20 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	private static final char EXCLAMATION_CHAR = '!';
 	protected ResourceLoader resourceLoader;
 	protected String encoding = "UTF-8";
-	protected String resourcePath = "classpath:/META-INF/lib_db_autoupdate/sql/";
+	protected String resourcePath = "classpath:/META-INF/darwin/sql/";
 
+	/**
+	 * Constructor.
+	 */
 	public DefaultResourceAccessor() {}
 
+	/**
+	 * Constructor.
+	 *
+	 * @param resourceLoader Spring {@link ResourceLoader} to use for loading resources
+	 * @param encoding encoding of the resources
+	 * @param resourcePath base path where patches should be looked up for
+	 */
 	public DefaultResourceAccessor(ResourceLoader resourceLoader, String encoding, String resourcePath) {
 		this.resourceLoader = resourceLoader;
 		this.encoding = encoding;
@@ -52,39 +60,52 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	}
 
 	/**
-	 * Returns resource list (means list of resource objects) ordered by name.
+	 * Returns resource list (means list of resource objects) ordered by name for certain platform.
+	 *
+	 * @param platform
 	 */
 	@Override
-	public Resource[] getSortedResourceList(String resourceName) {
-		String normalizedPath = normalizePath(this.resourcePath, resourceName, true);
-		PathMatchingResourcePatternResolver resolver =
-				new OC4JPathMatchingResourcePatternResolver(resourceLoader);
-
+	public Resource[] getSortedResourceList(Platform platform) {
+		final String normalizedPath = normalizePath(this.resourcePath, platform.getFolderName(), true);
+		final PathMatchingResourcePatternResolver resolver = new OC4JPathMatchingResourcePatternResolver(resourceLoader);
 		return getResources(normalizedPath, resolver);
 	}
 
 	/**
-	 * Returns tokenized items in list.
+	 * Returns tokenized SQL statements in list.
 	 */
 	@Override
-	public List<String> getTokenizedSQLScriptContentFromResource(String resourceName) {
-		String content = getTextContentFromResource(resourceName);
+	public List<String> getTokenizedSQLScriptContentFromResource(String resourcePath) {
+		final String content = getTextContentFromResource(resourcePath);
 		return tokenizeSQLScriptContent(content);
+	}
+
+	/**
+	 * Returns unparsed text content of specified resource.
+	 */
+	@Override
+	public String getTextContentFromResource(String resourcePath) {
+		String normalizedPath = normalizePath(this.resourcePath, resourcePath, false);
+		//base path may contain fe: classpath*:/directory ... so when looking up for specific resource, asterisk must be removed
+		normalizedPath = normalizedPath.replaceAll("\\*", "");
+
+		final Resource resource = resourceLoader.getResource(normalizedPath);
+		return readResource(resourcePath, normalizedPath, resource);
 	}
 
 	/**
 	 * Tokenizes content by specified delimiter and puts it into list.
 	 */
-	public List<String> tokenizeSQLScriptContent(String content) {
+	protected List<String> tokenizeSQLScriptContent(String content) {
 		Assert.notNull(content, "SQL content is NULL!");
-		List<String> result = new LinkedList<String>();
+		final List<String> result = new LinkedList<String>();
+		final int contentLength = content.length();
 
-		int contentLength = content.length();
 		boolean inString = false;
 		int stringStartIndex = -1;
 		boolean inComment = false;
 		boolean lineComment = false;
-		StringBuilder buffer = new StringBuilder();
+		final StringBuilder buffer = new StringBuilder();
 
 		for(int i = 0; i < contentLength; i++) {
 			char currentChar = content.charAt(i);
@@ -126,29 +147,13 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	}
 
 	/**
-	 * Returns unparsed text content of specified resource.
+	 * Automatically finds all resources on path.
 	 */
-	@Override
-	public String getTextContentFromResource(String resourceName) {
-		String normalizedPath = normalizePath(resourcePath, resourceName, false);
-		//base path may contain fe: classpath*:/directory ... so when looking up for specific resource, asterisk must be removed
-		normalizedPath = normalizedPath.replaceAll("\\*", "");
-		Resource resource = resourceLoader.getResource(normalizedPath);
-
-		return readResource(resourceName, normalizedPath, resource);
-	}
-
 	protected Resource[] getResources(String normalizedPath, PathMatchingResourcePatternResolver resolver) {
 		Resource[] resources = null;
 		try {
 			resources = resolver.getResources(normalizedPath + "*");
-			if(resources != null) {
-				Arrays.sort(resources, new ResourceVersionComparator());
-			} else {
-				String msg = "Resource " + normalizedPath + " cannot be found!";
-				log.error(msg);
-				throw new RuntimeException(msg);
-			}
+			Arrays.sort(resources, new ResourceVersionComparator());
 		} catch(IOException ex) {
 			resources = tryToFindResourceListInDescriptor(resolver, normalizedPath, resources);
 
@@ -162,22 +167,21 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 		return resources;
 	}
 
+	/**
+	 * Reads contents of the resource.
+	 */
 	protected String readResource(String resourceName, String normalizedPath, Resource resource) {
 		if(resource.exists()) {
-			InputStream is = null;
-			try {
-				is = resource.getInputStream();
-				String content = IOUtils.toString(is, encoding).trim();
+			try (final InputStream is = resource.getInputStream()) {
+				final String content = IOUtils.toString(is, encoding).trim();
 				if(content.endsWith(";")) {
 					return content.substring(0, content.length() - 1);
 				}
 				return content;
 			} catch(IOException ex) {
-				String msg = "Unexpectedly cannot read resource: " + normalizedPath + resourceName;
+				final String msg = "Unexpectedly cannot read resource: " + normalizedPath + resourceName;
 				log.fatal(msg, ex);
 				throw new RuntimeException(msg, ex);
-			} finally {
-				IOUtils.closeQuietly(is);
 			}
 		} else {
 			if(log.isWarnEnabled()) {
@@ -187,44 +191,41 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 		}
 	}
 
+	/**
+	 * Attempts to find and parse descriptor.txt file on classpath and retrieve list of patches from it.
+	 */
 	protected Resource[] tryToFindResourceListInDescriptor(PathMatchingResourcePatternResolver resolver,
 														   String normalizedPath, Resource[] resources) {
 		//try to locate descriptor file
-		Resource resource = resolver.getResource(normalizedPath + DESCRIPTOR_FILE);
+		final Resource resource = resolver.getResource(normalizedPath + DESCRIPTOR_FILE);
 		if(resource.exists()) {
-			InputStream is = null;
-			try {
-				is = resource.getInputStream();
-				String list = IOUtils.toString(is);
-				List result = new ArrayList();
+			try (final InputStream is = resource.getInputStream()) {
+				final String list = IOUtils.toString(is, encoding);
+				final List<Resource> result = new LinkedList<>();
 
 				for(StringTokenizer st = new StringTokenizer(list, "\n", false); st.hasMoreTokens(); ) {
-					String item = st.nextToken();
-					Resource res = resolver.getResource(item.trim());
-					if(res != null) {
-						if(res.exists()) {
-							result.add(res);
-						} else {
-							if(log.isWarnEnabled()) {
-								log.warn("Descriptor contains reference to resource: " + res.toString() +
-										" but it does not exist!");
-							}
+					final String item = st.nextToken();
+					final Resource res = resolver.getResource(item.trim());
+					if(res.exists()) {
+						result.add(res);
+					} else {
+						if(log.isWarnEnabled()) {
+							log.warn("Descriptor contains reference to resource: " + res.toString() +
+									" but it does not exist!");
 						}
 					}
 				}
 
 				resources = new Resource[result.size()];
 				for(int i = 0; i < result.size(); i++) {
-					Resource res = (Resource)result.get(i);
+					final Resource res = result.get(i);
 					resources[i] = res;
 				}
 
 			} catch(IOException ex) {
-				String msg = "Cannot open descriptor resource at path: " + normalizedPath + DESCRIPTOR_FILE;
+				final String msg = "Cannot open descriptor resource at path: " + normalizedPath + DESCRIPTOR_FILE;
 				log.error(msg);
 				throw new RuntimeException(msg, ex);
-			} finally {
-				IOUtils.closeQuietly(is);
 			}
 		}
 		return resources;
@@ -234,11 +235,14 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	 * Normalizes path.
 	 */
 	protected String normalizePath(String resourcePath, String resourceName, boolean directory) {
-		if(!resourcePath.endsWith("/")) resourcePath = resourcePath + "/";
-		if(resourceName.startsWith("/")) resourceName = resourceName.substring(1);
-		String finalName = resourcePath + resourceName;
-		if(directory && !finalName.endsWith("/")) finalName = finalName + "/";
-		return finalName;
+		if(!resourcePath.endsWith("/")) {
+			resourcePath = resourcePath + "/";
+		}
+		if(resourceName.startsWith("/")) {
+			resourceName = resourceName.substring(1);
+		}
+		final String finalName = resourcePath + resourceName;
+		return directory && !finalName.endsWith("/") ? finalName + "/" : finalName;
 	}
 
 	private boolean isLineComment(String content, int currentPos, char currentChar) {
@@ -281,7 +285,10 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 		return currentChar == delimiterChar && nextChar != delimiterChar;
 	}
 
-	protected class OC4JPathMatchingResourcePatternResolver extends PathMatchingResourcePatternResolver {
+	/**
+	 * TODO JNO ... tohle možná odebrat?
+	 */
+	protected static class OC4JPathMatchingResourcePatternResolver extends PathMatchingResourcePatternResolver {
 
 		/**
 		 * Create a new PathMatchingResourcePatternResolver with a DefaultResourceLoader.

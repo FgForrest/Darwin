@@ -2,30 +2,29 @@ package one.edee.darwin.model;
 
 
 import lombok.Data;
+import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.exception.PatchFormatException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 
 /**
- * This class represent Patch. Contain all necessary information about him.
+ * This class represent database patch - its id, component it relates to, date and time it was detected for the first
+ * time in the application and database platform it relates to.
  *
  * @author Radek Salay, FG Forest a.s. 6/15/16.
  */
 @Data
+@CommonsLog
 public class Patch {
-    private static final Log log = LogFactory.getLog(Patch.class);
-
     private final Integer patchId;
     private final String patchName;
     private final String componentName;
-    private final Date detectedOn;
-    private final String platform;
+    private final LocalDateTime detectedOn;
+    private final Platform platform;
 
     private int processTime;
-    private Date finishedOn;
+    private LocalDateTime finishedOn;
 
     /**
      * @param patchName     name of current patch, for example 1.0.4
@@ -34,8 +33,8 @@ public class Patch {
      * @param platform      for what platform patch is, for example MySQL
      */
     public Patch(Integer patchId, String patchName, String componentName,
-                 Date detectedOn, String platform) {
-        patchValidation(patchId, patchName, componentName, detectedOn, platform);
+                 LocalDateTime detectedOn, Platform platform) {
+        validatePatch(patchId, patchName, componentName, detectedOn, platform);
         this.patchId = patchId;
         this.patchName = patchName;
         this.componentName = componentName;
@@ -43,9 +42,16 @@ public class Patch {
         this.platform = platform;
     }
 
+    /**
+     * @param patchName     name of current patch, for example 1.0.4
+     * @param componentName id for which component patch is
+     * @param detectedOn    time when was patch found on classpath
+     * @param platform      for what platform patch is, for example MySQL
+     * @param finishedOn    date and time patch was successfully applied to database
+     */
     public Patch(Integer patchId, String patchName, String componentName,
-                 Date detectedOn, String platform, Date finishedOn) {
-        patchValidation(patchId, patchName, componentName, detectedOn, platform);
+                 LocalDateTime detectedOn, Platform platform, LocalDateTime finishedOn) {
+        validatePatch(patchId, patchName, componentName, detectedOn, platform);
         this.patchId = patchId;
         this.patchName = patchName;
         this.componentName = componentName;
@@ -54,7 +60,13 @@ public class Patch {
         this.finishedOn = finishedOn;
     }
 
-    public Patch(String patchName, String componentName, String platform, Date detectedOn) {
+    /**
+     * @param patchName     name of current patch, for example 1.0.4
+     * @param componentName id for which component patch is
+     * @param platform      for what platform patch is, for example MySQL
+     * @param detectedOn    time when was patch found on classpath
+     */
+    public Patch(String patchName, String componentName, Platform platform, LocalDateTime detectedOn) {
         this.patchId = null;
         this.patchName = patchName;
         this.componentName = componentName;
@@ -62,16 +74,27 @@ public class Patch {
         this.detectedOn = detectedOn;
     }
 
+    /**
+     * Returns true if information about the patch is already present in database.
+     * @return
+     */
     public boolean isInDb() {
         return this.patchId != null;
     }
 
+    /**
+     * Returns path to the patch contents.
+     * @return
+     */
     public String getResourcesPath() {
         return getPlatform() + "/" + getPatchName();
     }
 
-    private void patchValidation(Integer patchId, String patchName, String componentName,
-                                 Date detectedOn, String platform) throws PatchFormatException {
+    /**
+     * Validates consistency of the patch.
+     */
+    private void validatePatch(Integer patchId, String patchName, String componentName,
+                               LocalDateTime detectedOn, Platform platform) throws PatchFormatException {
         if (patchName.isEmpty()) {
             throw new PatchFormatException("PatchName must not be empty! patchId: " +
                     patchId + " patchName: " + patchName + " componentName: " +

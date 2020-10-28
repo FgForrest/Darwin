@@ -1,20 +1,21 @@
 package one.edee.darwin.storage;
 
-import com.fg.commons.version.VersionDescriptor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.Patch;
-import one.edee.darwin.resources.PatchMode;
+import one.edee.darwin.model.Platform;
+import one.edee.darwin.model.version.VersionDescriptor;
+import one.edee.darwin.resources.PatchType;
 import one.edee.darwin.resources.ResourceMatcher;
 import one.edee.darwin.resources.ResourceNameAnalyzer;
 import one.edee.darwin.resources.ResourcePatchMediator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,28 +24,26 @@ import java.util.Objects;
  * it assumes, that version of the storage is that with last executed script.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
-@EqualsAndHashCode(callSuper = true)
-@Data
+@RequiredArgsConstructor
+@CommonsLog
 public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage implements StorageChecker {
-    private static final Log log = LogFactory.getLog(DefaultDatabaseStorageChecker.class);
     private final ResourcePatchMediator resourcePatchMediator;
-    private ResourceMatcher resourceMatcher;
-    private ResourceNameAnalyzer resourceNameAnalyzer;
-    private boolean patchAndTableExists;
+    @Setter @Getter private ResourceMatcher resourceMatcher;
+	@Setter @Getter private ResourceNameAnalyzer resourceNameAnalyzer;
+	@Setter @Getter private boolean patchAndTableExists;
 
 	@Override
-    public VersionDescriptor guessVersion(String componentName, AutoUpdatePersister autoUpdatePersister) {
-        final String platform = getPlatform();
+    public VersionDescriptor guessVersion(String componentName, DarwinStorage darwinStorage) {
+        final Platform platform = getPlatform();
         final Resource[] sortedResourceList = resourceAccessor.getSortedResourceList(platform);
         final Patch[] patches = resourcePatchMediator.getPatches(
-        		sortedResourceList, componentName, platform, autoUpdatePersister, this,
-				PatchMode.Guess);
+        		sortedResourceList, componentName, platform, darwinStorage, this,
+				PatchType.GUESS);
         VersionDescriptor guessedVersion = null;
 
         for (Patch patch : patches) {
-            if (resourceMatcher.isResourceAcceptable(PatchMode.Guess, patch.getPatchName())) {
+            if (resourceMatcher.isResourceAcceptable(PatchType.GUESS, patch.getPatchName())) {
                 VersionDescriptor resourceVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
 
                 long start = System.currentTimeMillis();
@@ -53,7 +52,7 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 
                 if (result) {
                     guessedVersion = resourceVersion;
-	                markGuessedPatchAsFinished(autoUpdatePersister, patch, resourceVersion, start, stop);
+	                markGuessedPatchAsFinished(darwinStorage, patch, resourceVersion, start, stop);
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("Storage not compatible with version: " + resourceVersion);
@@ -66,22 +65,22 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
     }
 
 	@Override
-	public boolean guessPatchAlreadyApplied(String componentName, AutoUpdatePersister autoUpdatePersister, VersionDescriptor checkedVersion) {
-		final String platform = getPlatform();
+	public boolean guessPatchAlreadyApplied(String componentName, DarwinStorage darwinStorage, VersionDescriptor checkedVersion) {
+		final Platform platform = getPlatform();
 		final Resource[] sortedResourceList = resourceAccessor.getSortedResourceList(platform);
 		final Patch[] patches = resourcePatchMediator.getPatches(
-				sortedResourceList, componentName, platform, autoUpdatePersister, this,
-				PatchMode.Guess);
+				sortedResourceList, componentName, platform, darwinStorage, this,
+				PatchType.GUESS);
 
 		for (Patch patch : patches) {
-			if (resourceMatcher.isResourceAcceptable(PatchMode.Guess, patch.getPatchName())) {
+			if (resourceMatcher.isResourceAcceptable(PatchType.GUESS, patch.getPatchName())) {
 				VersionDescriptor patchVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
 				if (Objects.equals(patchVersion, checkedVersion)) {
 					long start = System.currentTimeMillis();
 					boolean result = executeScript(patch);
 					long stop = System.currentTimeMillis();
 					if (result) {
-						markGuessedPatchAsFinished(autoUpdatePersister, patch, patchVersion, start, stop);
+						markGuessedPatchAsFinished(darwinStorage, patch, patchVersion, start, stop);
 						return true;
 					}
 				}
@@ -90,18 +89,18 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 		return false;
 	}
 
-	private void markGuessedPatchAsFinished(AutoUpdatePersister autoUpdatePersister, Patch patch, VersionDescriptor resourceVersion, long start, long stop) {
+	private void markGuessedPatchAsFinished(DarwinStorage darwinStorage, Patch patch, VersionDescriptor resourceVersion, long start, long stop) {
 		if (log.isDebugEnabled()) {
 			log.debug("Storage compatible with version: " + resourceVersion);
 		}
 		if (existPatchAndSqlTable()) {
 			long duration = stop - start;
 			patch.setProcessTime((int) duration);
-			patch.setFinishedOn(new Date());
-			autoUpdatePersister.markPatchAsFinished(
-					autoUpdatePersister.insertPatchToDatabase(
+			patch.setFinishedOn(LocalDateTime.now());
+			darwinStorage.markPatchAsFinished(
+					darwinStorage.insertPatchToDatabase(
 							patch.getPatchName(), patch.getComponentName(),
-							new Date(), getPlatform()
+							LocalDateTime.now(), getPlatform()
 					)
 			);
 		}

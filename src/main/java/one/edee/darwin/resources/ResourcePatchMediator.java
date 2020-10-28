@@ -2,14 +2,16 @@ package one.edee.darwin.resources;
 
 import one.edee.darwin.model.InitiatingPatch;
 import one.edee.darwin.model.Patch;
-import one.edee.darwin.storage.AutoUpdatePersister;
+import one.edee.darwin.model.Platform;
+import one.edee.darwin.storage.DarwinStorage;
 import one.edee.darwin.storage.StorageChecker;
 import org.springframework.core.io.Resource;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
- * This method provide patches, when is patch and sql table active, then write information on them and take ID. But when is Db inactive then create pach with implicit ID(0)
+ * This method provide patches, when is patch and sql table active, then write information on them and take ID. But when
+ * is Db inactive then creates patch with implicit ID(0)
  *
  * @author Radek Salay, FG Forest a.s. 6/27/16.
  */
@@ -23,18 +25,18 @@ public class ResourcePatchMediator {
 	}
 
 	public Patch[] getPatches(Resource[] resources, String componentName,
-							  String platform, AutoUpdatePersister autoUpdatePersister,
-							  StorageChecker storageChecker,
-							  PatchMode patchMode) {
-        Patch[] patches = new Patch[resources.length];
+	                          Platform platform, DarwinStorage darwinStorage,
+	                          StorageChecker storageChecker,
+	                          PatchType patchType) {
+        final Patch[] patches = new Patch[resources.length];
         if (storageChecker.existPatchAndSqlTable()) {
-            final boolean anyPatchRecordedFor = autoUpdatePersister.isAnyPatchRecordedFor(componentName);
+            final boolean anyPatchRecordedFor = darwinStorage.isAnyPatchRecordedFor(componentName);
             for (int i = 0; i < resources.length; i++) {
 				final Resource resource = resources[i];
 				final String patchName = resourceNameAnalyzer.getPatchNameFromResource(resource);
-                boolean dbPatch = anyPatchRecordedFor && patchMode == PatchMode.Patch && resourceMatcher.isResourceAcceptable(PatchMode.Patch, patchName);
+                boolean dbPatch = anyPatchRecordedFor && patchType == PatchType.EVOLVE && resourceMatcher.isResourceAcceptable(PatchType.EVOLVE, patchName);
                 patches[i] = dbPatch ?
-						convertToPatchPersistedInDatabase(resource, componentName, platform, autoUpdatePersister) :
+						convertToPatchPersistedInDatabase(resource, componentName, platform, darwinStorage) :
 						convertToVirtualPatch(resource, componentName, platform);
             }
         } else {
@@ -45,23 +47,23 @@ public class ResourcePatchMediator {
         return patches;
     }
 
-    private Patch convertToVirtualPatch(Resource resource, String componentName, String platform) {
+    private Patch convertToVirtualPatch(Resource resource, String componentName, Platform platform) {
         return new Patch(
                 resourceNameAnalyzer.getPatchNameFromResource(resource),
                 componentName,
                 platform,
-				new Date()
+				LocalDateTime.now()
         );
     }
 
     private Patch convertToPatchPersistedInDatabase(Resource o, String componentName,
-													String platform, AutoUpdatePersister autoUpdatePersister) {
+													Platform platform, DarwinStorage darwinStorage) {
         return new InitiatingPatch(
                 resourceNameAnalyzer.getPatchNameFromResource(o),
                 componentName,
-                new Date(),
+		        LocalDateTime.now(),
                 platform,
-                autoUpdatePersister
+		        darwinStorage
         );
     }
 }

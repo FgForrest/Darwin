@@ -15,8 +15,8 @@ import javax.sql.DataSource;
  */
 @ContextConfiguration(
         locations = {
-                "/META-INF/lib_db_autoupdate/spring/datasource-config.xml",
-                "/META-INF/lib_db_autoupdate/spring/db-autoupdate-config-test.xml"
+		        "/META-INF/darwin/spring/datasource-config.xml",
+		        "/META-INF/darwin/spring/db-autoupdate-config-test.xml"
         }
 )
 public abstract class AbstractDbAutoupdateTest extends AbstractSpringTestCase {
