@@ -6,12 +6,12 @@ Základním stavebním kamenem je třída AutoUpdater - ta je deklarovaná jako 
 vytvoření proběhne aplikace její logiky. AutoUpdater si zjistí nad jakou platformou (databází) běží dle použitého datasource 
 (respektive package driveru, který je pro připojení k data sourcu použit).
 
-Dále se koukne do databáze, zda tam existuje tabulka `T_DB_AUTOUPDATE`, ve které si ukládá názvy a verze komponent, které se 
+Dále se koukne do databáze, zda tam existuje tabulka `DARWIN`, ve které si ukládá názvy a verze komponent, které se 
 skrze tuto knihovnu aktualizují. Pokud tabulka neexistuje, je založena. Do této tabulky si ihned uloží také svou vlastní 
 verzi - knihovna totiž umí stejným způsobem, jakým vytváří / aktualizuje databáze pro ostatní knihovny, aktualizovat i sama sebe.
 
 Výše uvedená logika se aplikuje pouze tím, že ve svém spring konfiguračním souboru uvedete import konfigurace z 
-*classpath:/META-INF/lib_db_autoupdate/spring/db-autoupdate-config.xml.*
+*classpath:/META-INF/darwin/spring/db-autoupdate-config.xml.*
 
 Stejná logika se aplikuje i na vaši knihovnu. Instanciujete beanu AutoUpdateru, dodáte třídu, která AutoUpdateru poskytne 
 základní informace o vaší knihovně - tzn. unikátní název a aktuální verzi knihovny. Na základě těchto dat si AutoUpdater 
@@ -70,8 +70,8 @@ Hlavní změna je v rozšíření o aplikaci db patchu nikoliv primárně podle 
 
 Nově AutoUpdater umí:
 
-* v tabulce `T_DB_AUTOUPDATE_PATCH` je historie kompletně i částečně provedených patchů
-* v tabulce `T_DB_AUTOUPDATE_SQL` je historie provedených SQL příkazů a případnou vyjímku vrácenou DB
+* v tabulce `DARWIN_PATCH` je historie kompletně i částečně provedených patchů
+* v tabulce `DARWIN_SQL` je historie provedených SQL příkazů a případnou vyjímku vrácenou DB
 * dokáže aplikovat i všechny chybějící patche, tj. pokud již bude aplikován patch 2.2 a nově se mu na classpath objeví patch 2.1, pokusí se jej zpětně aplikovat
 * dokáže navázat aplikování patchů i z prostřed SQL souboru (bude porovnávat SQL příkaz proti těm, co už provedl)
 * vede si informaci o tom, jak dlouho mu provedení toho konkrétního SQL / patche trvalo
@@ -79,5 +79,5 @@ Nově AutoUpdater umí:
 
 Poznámka
 
-Pokud narazíte na problémy se zpětnou aplikací patchů dle nové logiky, pak vymazaním tablky `T_DB_AUTOUPDATE_PATCH` použije 
+Pokud narazíte na problémy se zpětnou aplikací patchů dle nové logiky, pak vymazaním tablky `DARWIN_PATCH` použije 
 knihovna pouze informace o verzích komponent jako dříve.

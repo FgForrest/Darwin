@@ -1,1 +1,1 @@
-SELECT finishedOn FROM T_DB_AUTOUPDATE_SQL WHERE patchId = ? AND statement = ?;
+SELECT finishedOn FROM DARWIN_SQL WHERE patchId = ? AND statement = ?;

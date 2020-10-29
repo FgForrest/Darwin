@@ -1,6 +1,7 @@
 package one.edee.darwin.resources;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
+import one.edee.darwin.model.Platform;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,20 +12,16 @@ import org.springframework.core.io.Resource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Description
- *
- * @author Jan Novotný, FG Forrest a.s. (c) 2007
- */
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
-public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
+public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
 	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
@@ -238,18 +235,18 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
         List result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent("" +
                 "-- Comment 1;\n" +
                 "/* Comment 2;;3;;4; */\n" +
-                "create table T_DB_AUTOUPDATE\n" +
+                "create table DARWIN\n" +
                 "(\n" +
-                "\tDB_AUTOUPDATE_IN_PK integer not null auto_increment,\n" +
-                "\tCOMPONENT_TX varchar(255) not null,\n" +
-                "\tMODIFIED_DT datetime not null,\n" +
-                "\tVERSION_TX varchar(20) not null,\n" +
-                "\tconstraint CNPK_DB_AUTOUPDATE primary key (DB_AUTOUPDATE_IN_PK),\n" +
-                "\tindex IX_DB_AUTOUPDATE_COMPONENT (COMPONENT_TX)\n" +
+                "\tid integer not null auto_increment,\n" +
+                "\tcomponent varchar(255) not null,\n" +
+                "\tmodified datetime not null,\n" +
+                "\tversion varchar(20) not null,\n" +
+                "\tconstraint CNPK_DB_AUTOUPDATE primary key (id),\n" +
+                "\tindex IX_DB_AUTOUPDATE_COMPONENT (component)\n" +
                 ") engine=InnoDB;" +
                 "\n\n" +
-                "update T_DB_AUTOUPDATE set COMPONENT_TX = 'XX;;X;XX';\n" +
-                "delete from T_DB_AUTOUPDATE;;");
+                "update DARWIN set component = 'XX;;X;XX';\n" +
+                "delete from DARWIN;;");
         assertEquals(3, result.size());
         assertTrue(((String) result.get(0)).startsWith("create table"));
         assertTrue(((String) result.get(1)).startsWith("update"));
@@ -283,7 +280,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
     public void testAlterInsert() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/alter-insert.sql");
 
-        String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
+        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(4, queries.size());
     }
@@ -294,7 +291,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
     @Test
     public void testTokenizeVeryLargeSQLScript() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/verylarge.sql");
-        String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
+        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(12185, queries.size());
     }
@@ -303,7 +300,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
     @Test
     public void testGetSortedResourceList() throws Exception {
         dbAutoUpdateResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
-        Resource[] files = dbAutoUpdateResourceAccessor.getSortedResourceList("");
+        Resource[] files = dbAutoUpdateResourceAccessor.getSortedResourceList(Platform.MYSQL);
         assertNotNull(files);
         assertTrue(files.length > 4);
         assertTrue(files[0].getFilename().endsWith("create.sql"), files[0].getFilename() + " doesn't end with create.sql");
@@ -313,7 +310,7 @@ public class DefaultResourceAccessorTest extends AbstractDbAutoupdateTest {
     @Test
     public void testTokenizeSQLScriptContentWithCommentInsideSQL() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/commentInsideSqlScript.sql");
-        String sql = IOUtils.toString(sqlResource.getInputStream(), "utf-8");
+        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(1, result.size());
         assertTrue(result.get(0).startsWith("CREATE TABLE T_FORUM_TOPIC ("));

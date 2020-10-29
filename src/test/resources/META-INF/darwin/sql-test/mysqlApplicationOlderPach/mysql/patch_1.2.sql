@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE_PATCH (componentName,patchName,processTime,detectedOn,finishedOn,platform) VALUE ('lib_db_autoupdate','TEST',0,'2016-06-28','2016-06-28','mysql');
+INSERT INTO DARWIN_PATCH (componentName,patchName,processTime,detectedOn,finishedOn,platform) VALUE ('darwin','TEST',0,'2016-06-28','2016-06-28','mysql');

@@ -5,7 +5,7 @@ Pro přilinkování knihovny stačí abyste do svého pom.xml přidali následuj
 ``` xml
 <dependency>   
     <groupId>com.fg</groupId>   
-    <artifactId>lib_db_autoupdate</artifactId>   
+    <artifactId>darwin</artifactId>   
     <version>4.0.0</version>
 </dependency>
 ```
@@ -39,7 +39,7 @@ Následně už stačí jen do Spring konfiguračního souboru vložit:
 
 ``` xml
 <!-- import bean knihovny - zajistí setup infrastruktury pro fungování knihovny --> 
-<import resource="classpath:/META-INF/lib_db_autoupdate/spring/db-autoupdate-config.xml"/> 
+<import resource="classpath:/META-INF/darwin/spring/db-autoupdate-config.xml"/> 
 
 <!-- TOTO JE JIŽ KONFIGURACE VAŠEHO PROJEKTU --> 
 <!-- konfigurace třídy, která zajistí vlastní vytvoření / patch vaší databáze --> 

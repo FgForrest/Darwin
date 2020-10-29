@@ -1,1 +1,1 @@
-select * from T_DB_AUTOUPDATE_LOCK;
+select * from DARWIN_LOCK;

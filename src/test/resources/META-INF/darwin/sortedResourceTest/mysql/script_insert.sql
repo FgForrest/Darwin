@@ -1,0 +1,1 @@
+INSERT INTO DARWIN_SQL (patchId, statement,processTime,finishedOn,exception) VALUES (?,?,?,?,?);

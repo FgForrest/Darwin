@@ -26,7 +26,7 @@ public abstract class AbstractDatabaseStorage implements InitializingBean, Resou
     protected final DefaultResourceAccessor dbResourceAccessor = new DefaultResourceAccessor();
     @Getter @Setter protected ResourceAccessor resourceAccessor;
     @Getter @Setter protected PlatformTransactionManager transactionManager;
-    @Getter protected JdbcTemplate jdbcTemplate;
+    @Getter @Setter protected JdbcTemplate jdbcTemplate;
     private Platform platform;
 
     @Override

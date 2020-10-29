@@ -1,1 +1,1 @@
-UPDATE T_DB_AUTOUPDATE_SQL SET processTime = ?, finishedOn = ?, exception = ? WHERE patchId = ? AND statementHash = ?;
+UPDATE DARWIN_SQL SET processTime = ?, finishedOn = ?, exception = ? WHERE patchId = ? AND statementHash = ?;

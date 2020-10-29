@@ -1,1 +1,1 @@
-select * from T_DB_AUTOUPDATE;
+select * from DARWIN;

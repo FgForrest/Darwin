@@ -1,6 +1,7 @@
 package one.edee.darwin.integrate.mysql;
 
 import one.edee.darwin.integrate.IntegrationTestRecoveringAfterPartiallyAppliedPatch;
+import one.edee.darwin.model.Platform;
 import org.springframework.context.annotation.Profile;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -9,10 +10,10 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
-public class IntegrationTestMysqlEstablismentAgterPartiallyAppliedPatch extends IntegrationTestRecoveringAfterPartiallyAppliedPatch {
+public class IntegrationTestMysqlEstablismentAfterPartiallyAppliedPatch extends IntegrationTestRecoveringAfterPartiallyAppliedPatch {
 
-	public IntegrationTestMysqlEstablismentAgterPartiallyAppliedPatch() {
-        super("mysql");
+	public IntegrationTestMysqlEstablismentAfterPartiallyAppliedPatch() {
+        super(Platform.MYSQL);
     }
 
 }

@@ -41,7 +41,7 @@ public class DarwinConfiguration {
 	public ResourceAccessor dbAutoUpdateResourceAccessor() {
 		return new DefaultResourceAccessor(
 				applicationContext, "UTF-8",
-				"classpath:META-INF/lib_db_autoupdate/sql/"
+				"classpath:META-INF/darwin/sql/"
 		);
 	}
 

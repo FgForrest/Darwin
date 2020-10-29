@@ -7,19 +7,13 @@ import org.springframework.test.context.ContextConfiguration;
 
 import javax.sql.DataSource;
 
-/**
- * Description
- *
- * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
- */
 @ContextConfiguration(
         locations = {
 		        "/META-INF/darwin/spring/datasource-config.xml",
 		        "/META-INF/darwin/spring/db-autoupdate-config-test.xml"
         }
 )
-public abstract class AbstractDbAutoupdateTest extends AbstractSpringTestCase {
+public abstract class AbstractDarwinTest extends AbstractSpringTestCase {
 	@Autowired private DataSource dataSource;
 
 	protected JdbcTemplate getJdbcTemplate() {

@@ -1,1 +1,1 @@
-SELECT id FROM T_DB_AUTOUPDATE_PATCH WHERE componentName =?;
+SELECT id FROM DARWIN_PATCH WHERE componentName =?;

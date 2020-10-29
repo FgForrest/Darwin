@@ -1,0 +1,10 @@
+classpath:META-INF/darwin/sql/mysql/create.sql
+classpath:META-INF/darwin/sql/mysql/patch_1.1.sql
+classpath:META-INF/darwin/sql/mysql/insert.sql
+classpath:META-INF/darwin/sql/mysql/update.sql
+classpath:META-INF/darwin/sql/mysql/version.sql
+classpath:META-INF/darwin/sql/mysql/lock_check.sql
+classpath:META-INF/darwin/sql/mysql/lock_delete.sql
+classpath:META-INF/darwin/sql/mysql/lock_insert.sql
+classpath:META-INF/darwin/sql/mysql/lock_update.sql
+classpath:META-INF/darwin/sql/mysql/lock_current_time.sql

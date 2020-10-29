@@ -1,6 +1,7 @@
 package one.edee.darwin.integrate.h2;
 
 import one.edee.darwin.integrate.IntegrationTestRecoveringAfterPartiallyAppliedPatch;
+import one.edee.darwin.model.Platform;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Profile;
@@ -12,8 +13,9 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles(value = "H2")
 @Profile(value = "H2")
 public class IntegrationTestH2EstablismentAgterPartiallyAppliedPatch extends IntegrationTestRecoveringAfterPartiallyAppliedPatch {
+
     public IntegrationTestH2EstablismentAgterPartiallyAppliedPatch() {
-        super("h2");
+        super(Platform.H2);
     }
 
 	@Disabled(value = "Oracle can rollback ddl soo this test is unnecessary")

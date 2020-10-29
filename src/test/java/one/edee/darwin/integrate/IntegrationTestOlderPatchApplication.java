@@ -1,44 +1,40 @@
 package one.edee.darwin.integrate;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.Darwin;
 import one.edee.darwin.model.Patch;
+import one.edee.darwin.model.Platform;
 import one.edee.darwin.resources.ResourceAccessorForTest;
 import one.edee.darwin.storage.DarwinStorage;
 import one.edee.darwin.storage.StorageChecker;
-import one.edee.darwin.utils.AutoupdateTestHelper;
+import one.edee.darwin.utils.DarwinTestHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
-import static one.edee.darwin.utils.AutoupdateTestHelper.assertPatchFinishedInDb;
-import static one.edee.darwin.utils.AutoupdateTestHelper.assertPatchNotPresentInDb;
+import static one.edee.darwin.utils.DarwinTestHelper.assertPatchFinishedInDb;
+import static one.edee.darwin.utils.DarwinTestHelper.assertPatchNotPresentInDb;
 
 
 /**
  * @author Radek Salay, FG Forest a.s. 6/28/16.
  */
 @DirtiesContext
-public abstract class IntegrationTestOlderPatchApplication extends AbstractDbAutoupdateTest {
+public abstract class IntegrationTestOlderPatchApplication extends AbstractDarwinTest {
     @Autowired
     Darwin darwin;
 
-    @Autowired @Qualifier(value = "jdbcTemplateTest")
-    JdbcTemplate jdbcTemplate;
-
 	@Test
-    public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() throws Exception {
+    public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() {
         final DarwinStorage darwinStorage = darwin.getDarwinStorage();
         final StorageChecker storageChecker = darwin.getStorageChecker();
-        final String platform = storageChecker.getPlatform();
+        final Platform platform = storageChecker.getPlatform();
 
 		//this patch is not originally in place but appear there suddenly
-		final Patch oldPatch = new Patch("patch_1.2.sql", "lib_db_autoupdate", platform, new Date());
+		final Patch oldPatch = new Patch("patch_1.2.sql", "darwin", platform, LocalDateTime.now());
 
 		//check that retrospective patch isn't there
 		assertPatchNotPresentInDb(darwinStorage, oldPatch);
@@ -54,8 +50,8 @@ public abstract class IntegrationTestOlderPatchApplication extends AbstractDbAut
 	}
 
 	@AfterEach
-    public void tearDown() throws Exception {
-		AutoupdateTestHelper.deleteAllInfrastructuralPages(darwin);
+    public void tearDown() {
+		DarwinTestHelper.deleteAllInfrastructuralPages(darwin);
     }
 
 }

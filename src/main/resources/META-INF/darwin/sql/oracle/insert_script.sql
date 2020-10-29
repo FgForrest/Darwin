@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE_SQL (id,patchId, statement, statementHash, processTime, finishedOn, exception) VALUES (SQ_T_DB_AUTOUPDATE_SQL.nextval,?,?,?,?,?,?);
+INSERT INTO DARWIN_SQL (id,patchId, statement, statementHash, processTime, finishedOn, exception) VALUES (SQ_DARWIN_SQL.nextval,?,?,?,?,?,?);

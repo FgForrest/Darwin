@@ -1,1 +1,0 @@
-select * from T_DB_AUTOUPDATE_LOCK;

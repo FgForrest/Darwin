@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE_PATCH (id,componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES(SQ_T_DB_AUTOUPDATE_PATCH.nextval,?,?,?,?,?,?);
+INSERT INTO DARWIN_PATCH (id,componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES(SQ_DARWIN_PATCH.nextval,?,?,?,?,?,?);

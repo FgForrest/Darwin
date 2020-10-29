@@ -1,6 +1,6 @@
 package one.edee.darwin.integrate;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.DarwinBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -23,12 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 		}
 )
 @ActiveProfiles("MYSQL")
-public class IntegrationTestDuplicateCommands extends AbstractDbAutoupdateTest {
+public class IntegrationTestDuplicateCommands extends AbstractDarwinTest {
 	@Autowired private ApplicationContext applicationContext;
 	@Autowired @Qualifier(value = "jdbcTemplateTest") private JdbcTemplate jdbcTemplate;
 
 	@Test
-	public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() throws Exception {
+	public void IntegrationTest_LowerPatchSuddenlyAppears_andIsRetrospectivelyApplied() {
 		new DarwinBuilder(applicationContext, "duplicate", "1.1")
 				.withResourcePath("/META-INF/darwin/sql-test/occurence/correct/")
 				.build()
@@ -41,6 +41,6 @@ public class IntegrationTestDuplicateCommands extends AbstractDbAutoupdateTest {
 	@AfterEach
 	public void tearDown() throws Exception {
 		jdbcTemplate.update("DROP TABLE IF EXISTS TEST");
-		jdbcTemplate.update("DELETE FROM T_DB_AUTOUPDATE WHERE COMPONENT_TX = ?", "duplicate");
+		jdbcTemplate.update("DELETE FROM DARWIN WHERE component = ?", "duplicate");
 	}
 }

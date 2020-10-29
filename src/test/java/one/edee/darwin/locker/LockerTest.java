@@ -5,7 +5,7 @@ package one.edee.darwin.locker;
  * @version $Id$
  */
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.exception.ProcessIsLockedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public abstract class LockerTest extends AbstractDbAutoupdateTest {
+public abstract class LockerTest extends AbstractDarwinTest {
 	@Autowired private Locker locker;
 	private LocalDateTime now, nowPlusHour, nowMinusHour, nowPlusDay;
 

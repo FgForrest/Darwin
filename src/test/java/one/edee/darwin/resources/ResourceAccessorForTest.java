@@ -1,5 +1,6 @@
 package one.edee.darwin.resources;
 
+import one.edee.darwin.model.Platform;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
@@ -21,23 +22,23 @@ public class ResourceAccessorForTest extends DefaultResourceAccessor {
     }
 
     @Override
-    public Resource[] getSortedResourceList(String platform) {
+    public Resource[] getSortedResourceList(Platform platform) {
         Resource[] baseResources = super.getSortedResourceList(platform);
         Resource[] resources = null;
 
         if (resourcePathForPatch!=null) {
-            String normalizedPath = normalizePath(resourcePathForPatch, platform, true);
-            PathMatchingResourcePatternResolver resolver = new OC4JPathMatchingResourcePatternResolver(resourceLoader);
+            String normalizedPath = normalizePath(resourcePathForPatch, platform.getFolderName(), true);
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
 			resources = getResources(normalizedPath, resolver);
         }
 
-        Collection<Resource> baseResourcesAsList = baseResources != null ? Arrays.asList(baseResources) : Collections.<Resource>emptyList();
-        Collection<Resource> patchResourcesAsList = resources != null ? Arrays.asList(resources) : Collections.<Resource>emptyList();
+        Collection<Resource> baseResourcesAsList = baseResources != null ? Arrays.asList(baseResources) : Collections.emptyList();
+        Collection<Resource> patchResourcesAsList = resources != null ? Arrays.asList(resources) : Collections.emptyList();
 		Collection<Resource> allResource = new ArrayList<Resource>(baseResourcesAsList.size() + patchResourcesAsList.size());
         allResource.addAll(baseResourcesAsList);
         allResource.addAll(patchResourcesAsList);
 
-        return allResource.toArray(new Resource[allResource.size()]);
+        return allResource.toArray(new Resource[0]);
 
     }
     @Override

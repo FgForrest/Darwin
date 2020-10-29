@@ -14,7 +14,7 @@
 	</bean>
 
 	<bean id="dbAutoUpdateResourceAccessor4Test" class="one.edee.darwin.resources.DefaultResourceAccessor">
-		<property name="resourcePath" value="classpath:/META-INF/lib_db_autoupdate/sql-test/upgrade/"/>
+		<property name="resourcePath" value="classpath:/META-INF/darwin/sql-test/upgrade/"/>
 	</bean>
 
 	<bean id="cpsModuleScheduledExecutor"

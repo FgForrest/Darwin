@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE_SQL (patchId, statement, statementHash, processTime, finishedOn, exception) VALUES (?,?,?,?,?,?);
+INSERT INTO DARWIN_SQL (patchId, statement, statementHash, processTime, finishedOn, exception) VALUES (?,?,?,?,?,?);

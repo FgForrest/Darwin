@@ -1,1 +1,1 @@
-SELECT statementHash FROM T_DB_AUTOUPDATE_SQL;
+SELECT statementHash FROM DARWIN_SQL;

@@ -79,11 +79,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	@Getter @Setter private StorageUpdater storageUpdater;
 	@Getter @Setter private StorageChecker storageChecker;
 	@Getter @Setter private PlatformTransactionManager transactionManager;
-	private ApplicationContext ctx;
+	@Getter private ApplicationContext applicationContext;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.ctx = applicationContext;
+        this.applicationContext = applicationContext;
     }
 
 	/**
@@ -120,14 +120,14 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
         Assert.notNull(resourceNameAnalyzer, "Darwin needs resourceNameAnalyzer property to be not null!");
 
         //defaults
-		final ConfigurableListableBeanFactory beanFactory = ((AbstractApplicationContext)ctx).getBeanFactory();
+		final ConfigurableListableBeanFactory beanFactory = ((AbstractApplicationContext) applicationContext).getBeanFactory();
 		boolean dataSourcePresent = beanFactory.containsBean(dataSourceName);
         boolean transactionManagerPresent = beanFactory.containsBean(transactionManagerName);
         boolean lockerPresent = beanFactory.containsBean("locker") && beanFactory.getBean("locker") instanceof Locker;
         if (dataSourcePresent) {
             // comprehensive check if there isn't only ExternalDependency based proxy
             try {
-                DataSource bean = ctx.getBean(dataSourceName, DataSource.class);
+                DataSource bean = applicationContext.getBean(dataSourceName, DataSource.class);
                 bean.toString();
             } catch (NoSuchBeanDefinitionException e) {
                 dataSourcePresent = false;
@@ -135,9 +135,9 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
             }
         }
         if (dataSourcePresent) {
-            DataSource ds = (DataSource) ctx.getBean(dataSourceName);
+            DataSource ds = (DataSource) applicationContext.getBean(dataSourceName);
             transactionManager = transactionManagerPresent ?
-					(PlatformTransactionManager) ctx.getBean(transactionManagerName) : null;
+					(PlatformTransactionManager) applicationContext.getBean(transactionManagerName) : null;
 
 			resourcePatchMediator = new ResourcePatchMediator(resourceMatcher, resourceNameAnalyzer);
 
@@ -148,14 +148,14 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 				defaultChecker.setResourceAccessor(resourceAccessor);
 				defaultChecker.setResourceMatcher(resourceMatcher);
 				defaultChecker.setResourceNameAnalyzer(resourceNameAnalyzer);
-				defaultChecker.setResourceLoader(ctx);
+				defaultChecker.setResourceLoader(applicationContext);
 				storageChecker = defaultChecker;
 			}
             if (darwinStorage == null) {
 				final DefaultDatabaseDarwinStorage defaultPersister = new DefaultDatabaseDarwinStorage(resourceNameAnalyzer, storageChecker);
 				defaultPersister.setDataSource(ds);
                 defaultPersister.setTransactionManager(transactionManager);
-				defaultPersister.setResourceLoader(ctx);
+				defaultPersister.setResourceLoader(applicationContext);
 				darwinStorage = defaultPersister;
 			}
             if (storageUpdater == null) {
@@ -163,16 +163,16 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 				defaultUpdater.setResourceAccessor(resourceAccessor);
                 defaultUpdater.setDataSource(ds);
                 defaultUpdater.setTransactionManager(transactionManager);
-				defaultUpdater.setResourceLoader(ctx);
+				defaultUpdater.setResourceLoader(applicationContext);
 				storageUpdater = defaultUpdater;
 			}
             if (locker == null) {
 				if (lockerPresent) {
-					locker = ctx.getBean("locker", Locker.class);
+					locker = applicationContext.getBean("locker", Locker.class);
 				} else {
 					locker = new Locker();
 					locker.setResourceAccessor(resourceAccessor);
-					locker.setApplicationContext(ctx);
+					locker.setApplicationContext(applicationContext);
 					locker.setSkipIfDataSourceNotPresent(skipIfDataSourceNotPresent);
 					locker.setDataSourceName(dataSourceName);
 					locker.setTransactionManagerName(transactionManagerName);
@@ -240,11 +240,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	 */
 	private void updateMyself() {
 		final DefaultResourceAccessor resourceAccessor = new DefaultResourceAccessor(
-				ctx, "UTF-8", "classpath:/META-INF/lib_db_darwin/sql/"
+				applicationContext, "UTF-8", "classpath:/META-INF/lib_db_darwin/sql/"
 		);
 		final SchemaVersion myVersion = new SchemaVersion(DARWIN_COMPONENT_NAME, DARWIN_COMPONENT_VERSION);
 		final Darwin meUpdater = new Darwin();
-		meUpdater.setApplicationContext(ctx);
+		meUpdater.setApplicationContext(applicationContext);
 		meUpdater.setComponentDescriptor(myVersion);
 		meUpdater.setDataSourceName(dataSourceName);
 		meUpdater.setTransactionManagerName(transactionManagerName);

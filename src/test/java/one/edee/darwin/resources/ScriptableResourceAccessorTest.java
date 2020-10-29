@@ -1,11 +1,6 @@
 package one.edee.darwin.resources;
-/**
- * Description
- * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
- */
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -20,11 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
-public class ScriptableResourceAccessorTest extends AbstractDbAutoupdateTest {
+public class ScriptableResourceAccessorTest extends AbstractDarwinTest {
 	@Autowired private ScriptableResourceAccessor scriptableDbAutoUpdateResourceAccessor;
 
 	@Test
-	public void testGetTextContentFromResource() throws Exception {
+	public void testGetTextContentFromResource() {
 		String content = scriptableDbAutoUpdateResourceAccessor.getTextContentFromResource("sql-test/upgrade/mysql/scriptedCreate.sql");
 		assertNotNull(content);
 		assertTrue(content.startsWith("create table T_DB_MYPREF_AUTOUPDATE"));

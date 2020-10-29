@@ -1,1 +1,1 @@
-SELECT * FROM T_DB_AUTOUPDATE_PATCH WHERE componentName = null;
+SELECT * FROM DARWIN_PATCH WHERE componentName = null;

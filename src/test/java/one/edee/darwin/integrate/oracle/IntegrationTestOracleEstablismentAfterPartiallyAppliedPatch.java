@@ -1,6 +1,7 @@
 package one.edee.darwin.integrate.oracle;
 
 import one.edee.darwin.integrate.IntegrationTestRecoveringAfterPartiallyAppliedPatch;
+import one.edee.darwin.model.Platform;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Profile;
@@ -14,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 public class IntegrationTestOracleEstablismentAfterPartiallyAppliedPatch extends IntegrationTestRecoveringAfterPartiallyAppliedPatch {
 
     public IntegrationTestOracleEstablismentAfterPartiallyAppliedPatch() {
-        super("oracle");
+        super(Platform.ORACLE);
     }
 
 	@Disabled(value = "Oracle can rollback ddl soo this test is unnecessary")

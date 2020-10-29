@@ -1,1 +1,1 @@
-select VERSION_TX from T_DB_AUTOUPDATE where COMPONENT_TX = ?;
+select version from DARWIN where component = ?;

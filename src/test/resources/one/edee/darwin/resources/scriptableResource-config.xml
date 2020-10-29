@@ -4,7 +4,7 @@
 	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
 
 	<bean id="scriptableDbAutoUpdateResourceAccessor" class="one.edee.darwin.resources.ScriptableResourceAccessor">
-		<property name="resourcePath" value="META-INF/lib_db_autoupdate"/>
+		<property name="resourcePath" value="META-INF/darwin"/>
 		<property name="vars">
 			<map>
 				<entry key="tablePrefix" value="MYPREF_"/>

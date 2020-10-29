@@ -224,7 +224,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
                                      long processTime, Date finishedOn, Exception exception) {
         if (patch.isInDb()) {
         	// skip - table has different structure
-	        if ("lib_db_autoupdate".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
+	        if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
 		        return;
 	        }
             String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/insert_script.sql");
@@ -240,7 +240,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 	                                 long processTime, Date finishedOn, Exception exception) {
 		if (patch.isInDb()) {
 			// skip - table has different structure
-			if ("lib_db_autoupdate".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
+			if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
 				return;
 			}
 			String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/update_script.sql");

@@ -1,10 +1,10 @@
 package one.edee.darwin.integrate;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.Darwin;
 import one.edee.darwin.model.SchemaVersion;
 import one.edee.darwin.resources.DefaultResourceAccessor;
-import one.edee.darwin.utils.AutoupdateTestHelper;
+import one.edee.darwin.utils.DarwinTestHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,22 +19,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author Radek Salay, FG Forest a.s. 6/24/16.
  */
 @DirtiesContext
-public abstract class IntegrationTestCreateDbStructureFromNothing extends AbstractDbAutoupdateTest {
+public abstract class IntegrationTestCreateDbStructureFromNothing extends AbstractDarwinTest {
 	@Autowired ApplicationContext applicationContext;
     @Autowired Darwin darwin;
 
     /**
      * this test is about creating DB structure from state where don't exit any table. On end {@link Darwin#afterPropertiesSet()} exist complete DB structure.
      *
-     * @throws Exception
      */
     @Test
-    public void IntegrationTest_EmptyDatabase_AutoUpdaterInitializesItsDataStructureEntirely() throws Exception {
+    public void IntegrationTest_EmptyDatabase_DarwinInitializesItsDataStructureEntirely() {
     	//clean entire DB
-		AutoupdateTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
+		DarwinTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
 		//patch and SQL tables should not exists
 		assertFalse(existsPatchAndSqlTableNoCache());
-		//run autoupdater
+		//run Darwin
 		darwin.afterPropertiesSet();
 		//check patch and SQL table exists
         assertTrue(existsPatchAndSqlTableNoCache());
@@ -43,19 +42,18 @@ public abstract class IntegrationTestCreateDbStructureFromNothing extends Abstra
 	/**
 	 * this test is about creating DB structure from state where don't exit any table. On end {@link Darwin#afterPropertiesSet()} exist complete DB structure.
 	 *
-	 * @throws Exception
 	 */
 	@Test
-	public void IntegrationTest_EmptyDatabase_AutoUpdaterInitializesItsDataStructureEntirelyFromDefaultConfiguration() throws Exception {
+	public void IntegrationTest_EmptyDatabase_DarwinInitializesItsDataStructureEntirelyFromDefaultConfiguration() {
 		Darwin darwin = new Darwin();
 		darwin.setApplicationContext(applicationContext);
 		darwin.setComponentDescriptor(new SchemaVersion("test_component", "1.0"));
 		darwin.setResourceAccessor(new DefaultResourceAccessor(applicationContext, "UTF-8", "classpath:/com/fg/autoupdate/utils/"));
 		//clean entire DB
-		AutoupdateTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
+		DarwinTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
 		//patch and SQL tables should not exists
 		assertFalse(existsPatchAndSqlTableNoCache());
-		//run autoupdater
+		//run Darwin
 		darwin.afterPropertiesSet();
 		//check patch and SQL table exists
 		assertTrue(existsPatchAndSqlTableNoCache());
@@ -63,8 +61,8 @@ public abstract class IntegrationTestCreateDbStructureFromNothing extends Abstra
 
 	private boolean existsPatchAndSqlTableNoCache() {
 		try {
-			getJdbcTemplate().execute("SELECT * FROM T_DB_AUTOUPDATE_PATCH");
-			getJdbcTemplate().execute("SELECT * FROM T_DB_AUTOUPDATE_SQL");
+			getJdbcTemplate().execute("SELECT * FROM DARWIN_PATCH");
+			getJdbcTemplate().execute("SELECT * FROM DARWIN_SQL");
 			return true;
 		} catch(BadSqlGrammarException ex) {
 			return false;
@@ -72,8 +70,8 @@ public abstract class IntegrationTestCreateDbStructureFromNothing extends Abstra
 	}
 
 	@AfterEach
-    public void tearDown() throws Exception {
-		AutoupdateTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
+    public void tearDown() {
+		DarwinTestHelper.deleteAllInfrastructuralPages(getJdbcTemplate());
     }
 
 }

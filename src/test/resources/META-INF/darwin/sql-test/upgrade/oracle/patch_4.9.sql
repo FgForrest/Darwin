@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE (COMPONENT_TX, MODIFIED_DT, VERSION_TX) VALUES ('patch 3.9 byl nahran',SYSDATE,'1.0');
+INSERT INTO DARWIN (component, modified, version) VALUES ('patch 3.9 byl nahran',SYSDATE,'1.0');

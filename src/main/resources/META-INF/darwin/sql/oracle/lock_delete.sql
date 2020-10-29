@@ -1,1 +1,1 @@
-delete from T_DB_AUTOUPDATE_LOCK where PROCESS_TX = ? and (LEASE_UNTIL_DT <= SYSDATE or UNLOCK_KEY_TX = ?);
+delete from DARWIN_LOCK where processName = ? and (leaseUntil <= SYSDATE or unlockKey = ?);

@@ -1,6 +1,6 @@
 package one.edee.darwin.integrate;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.DarwinBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -14,9 +14,6 @@ import org.springframework.test.context.ContextConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * @author Radek Salay, FG Forest a.s. 7/11/16.
- */
 @ContextConfiguration(
 		locations = {
 				"/META-INF/darwin/spring/datasource-config.xml",
@@ -24,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 		}
 )
 @ActiveProfiles("MYSQL")
-public class IntegrationTestTransactionBoundaryRespecting extends AbstractDbAutoupdateTest {
+public class IntegrationTestTransactionBoundaryRespecting extends AbstractDarwinTest {
 	@Autowired private ApplicationContext applicationContext;
 	@Autowired @Qualifier(value = "jdbcTemplateTest") private JdbcTemplate jdbcTemplate;
 
@@ -54,6 +51,6 @@ public class IntegrationTestTransactionBoundaryRespecting extends AbstractDbAuto
 	@AfterEach
 	public void tearDown() throws Exception {
 		jdbcTemplate.update("DROP TABLE IF EXISTS TEST");
-		jdbcTemplate.update("DELETE FROM T_DB_AUTOUPDATE WHERE COMPONENT_TX = ?", "duplicate");
+		jdbcTemplate.update("DELETE FROM DARWIN WHERE component = ?", "duplicate");
 	}
 }

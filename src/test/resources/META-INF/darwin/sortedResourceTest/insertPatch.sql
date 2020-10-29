@@ -1,1 +1,0 @@
-INSERT INTO T_DB_AUTOUPDATE_PATCH (componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES(?,?,?,?,?,?);

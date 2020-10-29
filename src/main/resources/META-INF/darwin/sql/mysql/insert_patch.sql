@@ -1,1 +1,1 @@
-INSERT INTO T_DB_AUTOUPDATE_PATCH (componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES(?,?,?,?,?,?);
+INSERT INTO DARWIN_PATCH (componentName, patchName, processTime, detectedOn, finishedOn, platform) VALUES(?,?,?,?,?,?);

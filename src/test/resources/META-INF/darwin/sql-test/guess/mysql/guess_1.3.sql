@@ -1,1 +1,1 @@
-select COUNT(*) from T_DB_AUTOUPDATE where COMPONENT_TX = 'DEF';
+select COUNT(*) from DARWIN where component = 'DEF';

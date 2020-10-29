@@ -1,6 +1,6 @@
 package one.edee.darwin.storage;
 
-import one.edee.darwin.AbstractDbAutoupdateTest;
+import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.resources.DefaultResourceAccessor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
-public class DefaultDatabaseStorageUpdaterTest extends AbstractDbAutoupdateTest {
+public class DefaultDatabaseStorageUpdaterTest extends AbstractDarwinTest {
 
 	@Autowired
 	private DefaultDatabaseStorageUpdater tested;
@@ -31,7 +31,7 @@ public class DefaultDatabaseStorageUpdaterTest extends AbstractDbAutoupdateTest 
 	private DefaultResourceAccessor alternativeDbAutoUpdateResourceAccessor;
 
 	@Test
-	public void testRemoveComments() {
+	public void shouldRemoveComments() {
 		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented.sql");
 		assertNotNull(content);
 		String processedContent = tested.removeCommentsFromContent(content);
@@ -45,7 +45,7 @@ public class DefaultDatabaseStorageUpdaterTest extends AbstractDbAutoupdateTest 
 	}
 
 	@Test
-	public void testRemoveCommentsHashContent() {
+	public void shouldRemoveCommentsHashContent() {
 		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented2.sql");
 		assertNotNull(content);
 		String processedContent = tested.removeCommentsFromContent(content);
