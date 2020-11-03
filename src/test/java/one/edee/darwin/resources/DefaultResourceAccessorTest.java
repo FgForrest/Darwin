@@ -25,26 +25,26 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
 	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
-    @Qualifier("dbAutoUpdateResourceAccessor")
-    private DefaultResourceAccessor dbAutoUpdateResourceAccessor;
+    @Qualifier("darwinResourceAccessor")
+    private DefaultResourceAccessor darwinResourceAccessor;
 
 	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
-    @Qualifier("dbAutoUpdateResourceAccessor4Test")
-    private DefaultResourceAccessor alternativeDbAutoUpdateResourceAccessor;
+    @Qualifier("darwinResourceAccessor4Test")
+    private DefaultResourceAccessor alternativeDarwinResourceAccessor;
 
     @Test
     public void testGetTextContentFromResource() throws Exception {
-        String content = dbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/create.sql");
+        String content = darwinResourceAccessor.getTextContentFromResource("mysql/create.sql");
         assertNotNull(content);
         assertTrue(content.startsWith("create table"));
     }
 
     @Test
     public void testCommentWithSingleQuote() {
-        String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented-with-single-quote.sql");
+        String content = alternativeDarwinResourceAccessor.getTextContentFromResource("mysql/commented-with-single-quote.sql");
         assertNotNull(content);
-        List<String> statements = alternativeDbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(content);
+        List<String> statements = alternativeDarwinResourceAccessor.tokenizeSQLScriptContent(content);
         assertEquals(4, statements.size());
         assertEquals("INSERT INTO `T_CONTENT_SEARCH_INDEX` VALUES ('1', '1', 'Nejlepší časosběrný pop? \\\"Bestofka\\\" Eddie Stoilow', 'koule', '/cs/clanky/nejlepsi-casosberny-pop-bestofka-eddie-stoilow-1416.shtml', 'clanek', '2009-10-01 16:59:40', '2009-10-01 16:59:44', '2009-12-24 16:59:51')", statements.get(0));
         assertEquals("INSERT INTO `T_CONTENT_SEARCH_INDEX` VALUES ('2', '2', 'Prohrála v kartách natočila klip s J. X. Doležalem z Reflexu ', 'koule', '/cs/clanky/prohrala-v-kartach-natocila-klip-s-j-x-dolezalem-z-reflexu--1415.shtml', 'clanek', '2009-10-08 17:00:48', '2009-10-08 17:00:53', '2009-11-25 17:00:57')", statements.get(1));
@@ -54,9 +54,9 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
     @Test
     public void testEscapedWithSingleQuote() {
-        String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/escaped-with-single-quote.sql");
+        String content = alternativeDarwinResourceAccessor.getTextContentFromResource("mysql/escaped-with-single-quote.sql");
         assertNotNull(content);
-        List<String> statements = alternativeDbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(content);
+        List<String> statements = alternativeDarwinResourceAccessor.tokenizeSQLScriptContent(content);
         assertEquals(2, statements.size());
         assertEquals("INSERT INTO \"T_MAIL_NEWSLETTER_BODY\" (id, idNewsletter, partName, bodyPart) VALUES (1, 1, 'question', 'How it''s goin'' bro?')", statements.get(0));
         assertEquals("INSERT INTO \"T_MAIL_NEWSLETTER_BODY\" (id, idNewsletter, partName, bodyPart) VALUES (2, 1, 'answer', 'Sweet as hell!!!')", statements.get(1));
@@ -64,9 +64,9 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
 	@Test
 	public void testKeepSemicolonsInTrigger() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/trigger.sql");
+		String content = alternativeDarwinResourceAccessor.getTextContentFromResource("mysql/trigger.sql");
 		assertNotNull(content);
-		final List<String> result = alternativeDbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(content);
+		final List<String> result = alternativeDarwinResourceAccessor.tokenizeSQLScriptContent(content);
 		assertEquals(3, result.size());
 		assertEquals("DELIMITER $$", result.get(0));
 		assertEquals("CREATE TRIGGER TR_DENY_SUBJECT_DELETION\n" +
@@ -85,9 +85,9 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
 	@Test
 	public void testParseProcedure() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/procedure.sql");
+		String content = alternativeDarwinResourceAccessor.getTextContentFromResource("mysql/procedure.sql");
 		assertNotNull(content);
-		final List<String> result = alternativeDbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(content);
+		final List<String> result = alternativeDarwinResourceAccessor.tokenizeSQLScriptContent(content);
 		assertEquals(2, result.size());
 		assertEquals("DROP PROCEDURE IF EXISTS `EdeeCreatePage`", result.get(0));
 		assertEquals("CREATE PROCEDURE `EdeeCreatePage` (\n" +
@@ -232,7 +232,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
     @Test
     public void testTokenizeSQLScriptContent() throws Exception {
-        List result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent("" +
+        List result = darwinResourceAccessor.tokenizeSQLScriptContent("" +
                 "-- Comment 1;\n" +
                 "/* Comment 2;;3;;4; */\n" +
                 "create table DARWIN\n" +
@@ -264,7 +264,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
                 "\t\tsignal sqlstate '45000' set message_text = msg;;\n" +
                 "\tend if;;\n" +
                 "end;";
-        List<String> result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(test2);
+        List<String> result = darwinResourceAccessor.tokenizeSQLScriptContent(test2);
         assertEquals("create trigger TR_POSITIVE_AMOUNT_INS before insert on T_ACCOUNT_BALANCE\n" +
                 "for each row\n" +
                 "begin\n" +
@@ -281,7 +281,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/alter-insert.sql");
 
         String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
-        List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
+        List<String> queries = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(4, queries.size());
     }
 
@@ -292,15 +292,15 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     public void testTokenizeVeryLargeSQLScript() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/verylarge.sql");
         String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
-        List<String> queries = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
+        List<String> queries = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(12185, queries.size());
     }
 
     @DirtiesContext
     @Test
     public void testGetSortedResourceList() throws Exception {
-        dbAutoUpdateResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
-        Resource[] files = dbAutoUpdateResourceAccessor.getSortedResourceList(Platform.MYSQL);
+        darwinResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
+        Resource[] files = darwinResourceAccessor.getSortedResourceList(Platform.MYSQL);
         assertNotNull(files);
         assertTrue(files.length > 4);
         assertTrue(files[0].getFilename().endsWith("create.sql"), files[0].getFilename() + " doesn't end with create.sql");
@@ -311,7 +311,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     public void testTokenizeSQLScriptContentWithCommentInsideSQL() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/commentInsideSqlScript.sql");
         String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
-        List<String> result = dbAutoUpdateResourceAccessor.tokenizeSQLScriptContent(sql);
+        List<String> result = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(1, result.size());
         assertTrue(result.get(0).startsWith("CREATE TABLE T_FORUM_TOPIC ("));
     }

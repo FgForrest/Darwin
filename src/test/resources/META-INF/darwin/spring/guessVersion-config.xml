@@ -3,24 +3,24 @@
        xmlns="http://www.springframework.org/schema/beans"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
 
-	<bean id="dbAutoUpdateResourceMatcher" class="one.edee.darwin.resources.DefaultResourceMatcher"/>
+	<bean id="darwinResourceMatcher" class="one.edee.darwin.resources.DefaultResourceMatcher"/>
 
-	<bean id="dbAutoUpdateResourceNameAnalyzer" class="one.edee.darwin.resources.DefaultResourceNameAnalyzer"/>
+	<bean id="darwinResourceNameAnalyzer" class="one.edee.darwin.resources.DefaultResourceNameAnalyzer"/>
 
 	<bean id="dbAutoStorageCheckerToTest" class="one.edee.darwin.storage.DefaultDatabaseStorageChecker">
 		<constructor-arg>
 			<bean class="one.edee.darwin.resources.ResourcePatchMediator">
-				<constructor-arg index="0" ref="dbAutoUpdateResourceMatcher"/>
-				<constructor-arg index="1" ref="dbAutoUpdateResourceNameAnalyzer"/>
+				<constructor-arg index="0" ref="darwinResourceMatcher"/>
+				<constructor-arg index="1" ref="darwinResourceNameAnalyzer"/>
 			</bean>
 		</constructor-arg>
 		<property name="dataSource" ref="dataSource"/>
-		<property name="resourceAccessor" ref="dbAutoUpdateResourceAccessor4Test"/>
-		<property name="resourceMatcher" ref="dbAutoUpdateResourceMatcher"/>
-		<property name="resourceNameAnalyzer" ref="dbAutoUpdateResourceNameAnalyzer"/>
+		<property name="resourceAccessor" ref="darwinResourceAccessor4Test"/>
+		<property name="resourceMatcher" ref="darwinResourceMatcher"/>
+		<property name="resourceNameAnalyzer" ref="darwinResourceNameAnalyzer"/>
 	</bean>
 
-    <bean id="dbAutoUpdateResourceAccessor4Test" class="one.edee.darwin.resources.ResourceAccessorForTest">
+    <bean id="darwinResourceAccessor4Test" class="one.edee.darwin.resources.ResourceAccessorForTest">
         <property name="resourcePath" value="classpath:/META-INF/darwin/sql/"/>
 	</bean>
 

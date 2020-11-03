@@ -17,7 +17,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 
 	@Override
     protected LockState getDbProcessLock(final String processName, final LocalDateTime currentDate) {
-		final String checkScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/lock_check.sql");
+		final String checkScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_check.sql");
 		try {
 			final LocalDateTime leaseUntil = jdbcTemplate.queryForObject(checkScript, new Object[]{processName}, LocalDateTime.class);
 			if(leaseUntil != null) {
@@ -45,14 +45,14 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 
 	@Override
     protected LockState createDbLock(final String processName, final LocalDateTime until, final String unlockKey) {
-		final String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/lock_insert.sql");
+		final String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_insert.sql");
 		jdbcTemplate.update(insertScript, processName, until, unlockKey);
 		return LockState.LEASED;
 	}
 
 	@Override
     protected LockState releaseDbProcess(final String processName, final String unlockKey) throws IllegalStateException {
-		final String deleteScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/lock_delete.sql");
+		final String deleteScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_delete.sql");
 		if (jdbcTemplate.update(deleteScript, processName, unlockKey) == 0) {
 			final String msg = "No lock for process" + processName + " and unlockKey " + unlockKey + " was found!";
 			log.error(msg);
@@ -63,7 +63,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 
 	@Override
     protected LockState renewDbLease(final LocalDateTime until, final String processName, final String unlockKey) {
-		final String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/lock_update.sql");
+		final String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_update.sql");
 		if (jdbcTemplate.update(updateScript, until, processName, unlockKey) > 0) {
 			return LockState.LEASED;
 		} else {

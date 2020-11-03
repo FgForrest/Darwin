@@ -116,12 +116,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.fg.support</groupId>
-			<artifactId>lib_test_support</artifactId>
-			<version>2.0.4</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-test</artifactId>
 			<version>${spring.version}</version>
@@ -154,7 +148,7 @@
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<version>1.4.184</version>
+			<version>1.4.200</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

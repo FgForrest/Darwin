@@ -26,7 +26,7 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
 
     @Override
     public LocalDateTime getCurrentDatabaseTime() {
-        String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/lock_current_time.sql");
+        String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_current_time.sql");
         return jdbcTemplate.queryForObject(dateScript, LocalDateTime.class);
     }
 

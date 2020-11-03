@@ -25,7 +25,6 @@ import javax.sql.DataSource;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -113,7 +112,7 @@ import java.util.function.Supplier;
 public class Locker implements InitializingBean, ApplicationContextAware {
     private static final float CHECK_RENEW_RATIO = 0.7f;
 
-	/**
+    /**
 	 * If set to true Locker with silently disable itself in case datasource is not present in application context.
 	 */
     @Setter private boolean skipIfDataSourceNotPresent = true;
@@ -127,11 +126,24 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * no transaction manager is supplied from outside.
      */
     @Setter private String transactionManagerName = "transactionManager";
+    /**
+     * Name of the preferred {@link ScheduledExecutorService} if there are multiple ones in the context
+     */
+    @Setter private String preferredScheduledExecutorService;
+    /**
+     * Default count of retry attempts when lease / renew lease or release lock fails.
+     */
+    @Setter private int retryTimes = 20;
+    /**
+     * Default time to wait between repeated attempts to renew lease or release lock fails.
+     */
+    @Setter private long defaultRetryWaitTime = 3000L;
 
     @Setter private ApplicationContext applicationContext;
     @Setter private LockStorage lockStorage;
     @Setter private ResourceAccessor resourceAccessor;
     @Getter private final Map<String, LockRestorer> processMap = new ConcurrentHashMap<>();
+    private ScheduledExecutorService scheduledExecutorService;
 
     /**
      * Internal flag, if set to TRUE, locker will throw exceptions on every call.
@@ -213,7 +225,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 // mask exception to RuntimeException
                 throw new RuntimeException(e);
             }
-        }, waitForLockInMilliseconds, 10);
+        }, waitForLockInMilliseconds, retryTimes);
     }
 
     /**
@@ -297,7 +309,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 throw new RuntimeException(new ProcessIsLockedException(msg));
             }
             return null;
-        }, 3000L, 20);
+        }, defaultRetryWaitTime, retryTimes);
     }
 
     /**
@@ -323,9 +335,9 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             }
             processMap.remove(processName + unlockKey);
             final LockState lockState = lockStorage.releaseProcess(processName, unlockKey);
-            Assert.isTrue(lockState == LockState.LEASED);
+            Assert.isTrue(lockState == LockState.AVAILABLE);
             return null;
-        }, 3000L, 20);
+        }, defaultRetryWaitTime, retryTimes);
     }
 
     /**
@@ -335,14 +347,21 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                                          LocalDateTime now, String unlockKey) {
         if (lockerRestorer != null) {
             final long delayTime = getDelayTimeInMilliseconds(now, until);
-            final long renewTime = Duration.between(now, until).get(ChronoUnit.MILLIS);
+            final long renewTime = Duration.between(now, until).toMillis();
             processMap.put(processName + unlockKey, lockerRestorer);
             final CheckLockTimerTask timerTask = new CheckLockTimerTask(this, processName, unlockKey, renewTime);
-            if (applicationContext.containsBean("cpsModuleScheduledExecutor")) {
-                /* scheduled executor is now provided by root cps context. Runtime resolving is done mainly for testing purposes   */
-                applicationContext.getBean("cpsModuleScheduledExecutor", ScheduledExecutorService.class)
-                        .scheduleAtFixedRate(timerTask, delayTime, renewTime, TimeUnit.MILLISECONDS);
+            if (scheduledExecutorService == null) {
+                final Map<String, ScheduledExecutorService> scheduledExecutors = applicationContext.getBeansOfType(ScheduledExecutorService.class);
+                if (scheduledExecutors.size() > 0) {
+                    if (scheduledExecutors.size() == 1) {
+                        scheduledExecutorService = scheduledExecutors.values().iterator().next();
+                    } else {
+                        scheduledExecutorService = scheduledExecutors.get(preferredScheduledExecutorService);
+                    }
+                }
+                Assert.notNull(scheduledExecutorService, "Scheduled executor service not found!");
             }
+            scheduledExecutorService.scheduleAtFixedRate(timerTask, delayTime, renewTime, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -354,7 +373,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * @return delay time in millisecond. Minimal value is 0.
      */
     private long getDelayTimeInMilliseconds(LocalDateTime now, LocalDateTime until) {
-        long millis = (long) (Duration.between(until, now).get(ChronoUnit.MILLIS) * CHECK_RENEW_RATIO);
+        long millis = (long) (Duration.between(now, until).toMillis() * CHECK_RENEW_RATIO);
         if (millis > 0) {
             return millis;
         }
@@ -379,7 +398,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 log.debug("Releasing expired lock for process " + processName);
             }
             final LockState lockState1 = lockStorage.releaseProcess(processName, null);
-            Assert.isTrue(lockState1 == LockState.LEASED);
+            Assert.isTrue(lockState1 == LockState.AVAILABLE);
         }
     }
 
@@ -389,7 +408,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * behave unexpectedly.
      */
     private LocalDateTime normalizeDate(LocalDateTime until) {
-        final Duration diff = Duration.between(until, LocalDateTime.now());
+        final Duration diff = Duration.between(LocalDateTime.now(), until);
         final LocalDateTime databaseTime = lockStorage.getCurrentDatabaseTime();
         return databaseTime.plus(diff);
     }

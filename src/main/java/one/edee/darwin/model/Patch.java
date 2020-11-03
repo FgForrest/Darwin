@@ -87,7 +87,7 @@ public class Patch {
      * @return
      */
     public String getResourcesPath() {
-        return getPlatform() + "/" + getPatchName();
+        return getPlatform().getFolderName() + "/" + getPatchName();
     }
 
     /**

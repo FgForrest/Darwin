@@ -37,7 +37,7 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
     @Qualifier(value = "defaultDatabaseAutoUpdatePersister")
     private DefaultDatabaseDarwinStorage defaultDatabaseAutoUpdatePersister;
     @Autowired
-    @Qualifier("dbAutoUpdater")
+    @Qualifier("darwin")
     private Darwin darwin;
     @Autowired
     @Qualifier(value = "dbAutoStorageCheckerToTest")

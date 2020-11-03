@@ -7,6 +7,7 @@ package one.edee.darwin.locker;
 
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.exception.ProcessIsLockedException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
@@ -28,6 +29,13 @@ public abstract class LockerTest extends AbstractDarwinTest {
 		nowPlusHour = now.plusHours(1);
 		nowMinusHour = now.minusHours(1);
 		nowPlusDay = now.plusDays(1);
+		locker.setRetryTimes(1);
+	}
+
+	@AfterEach
+	void tearDown() {
+		// set back to default
+		locker.setRetryTimes(20);
 	}
 
 	@Test
@@ -84,6 +92,7 @@ public abstract class LockerTest extends AbstractDarwinTest {
 		String processName = "processTest6";
 		String unlockKey = null;
 		String anotherUnlockKey = null;
+		locker.setRetryTimes(2);
 		try{
 			unlockKey = locker.leaseProcess(processName, LocalDateTime.now().plusSeconds(1));
 			anotherUnlockKey = locker.leaseProcess(processName, nowPlusDay, 2500);

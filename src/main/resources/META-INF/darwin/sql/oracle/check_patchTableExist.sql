@@ -1,1 +1,1 @@
-SELECT * FROM DARWIN_PATCH WHERE componentName = null;
+SELECT * FROM DARWIN_PATCH WHERE componentName is null;

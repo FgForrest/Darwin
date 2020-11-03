@@ -75,7 +75,7 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 		for (Patch patch : patches) {
 			if (resourceMatcher.isResourceAcceptable(PatchType.GUESS, patch.getPatchName())) {
 				VersionDescriptor patchVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
-				if (Objects.equals(patchVersion, checkedVersion)) {
+				if (patchVersion != null && Objects.equals(patchVersion, checkedVersion)) {
 					long start = System.currentTimeMillis();
 					boolean result = executeScript(patch);
 					long stop = System.currentTimeMillis();
@@ -117,8 +117,8 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
     }
 
 	public boolean existsPatchAndSqlTableNoCache() {
-		final String sqlForPatch = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/check_patchTableExist.sql");
-		final String sqlForSQL = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/check_sqlCommandTableExists.sql");
+		final String sqlForPatch = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/check_patchTableExist.sql");
+		final String sqlForSQL = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/check_sqlCommandTableExists.sql");
 		try {
 			jdbcTemplate.execute(sqlForPatch);
 			jdbcTemplate.execute(sqlForSQL);

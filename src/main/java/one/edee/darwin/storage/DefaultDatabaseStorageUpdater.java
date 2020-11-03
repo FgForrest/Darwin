@@ -63,16 +63,17 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
     private void performUpdate(String resourcePath, String componentName, DarwinStorage darwinStorage) {
         final List<String> sqlCommands = resourceAccessor.getTokenizedSQLScriptContentFromResource(resourcePath);
         final Patch patch = darwinStorage.getPatchByResourcePath(resourcePath, componentName);
-		final boolean patchAndSqlTableExists = storageChecker.existPatchAndSqlTable();
+	    final boolean patchAndSqlTableExists = storageChecker.existPatchAndSqlTable();
 
 		long start = System.currentTimeMillis();
-
 		final Map<String, Integer> executedCommands = new HashMap<>(sqlCommands.size());
         for (String sqlCommand : sqlCommands) {
 			final Integer occurrence = executedCommands.get(sqlCommand);
 			final Integer newOccurrence = occurrence == null ? 1 : occurrence + 1;
 			executedCommands.put(sqlCommand, newOccurrence);
-	        final SqlScriptStatus executionStatus = patchAndSqlTableExists && patch.getPatchId()!=null ? darwinStorage.wasSqlCommandAlreadyExecuted(patch.getPatchId(), sqlCommand, newOccurrence) : SqlScriptStatus.NOT_EXECUTED;
+	        final SqlScriptStatus executionStatus = patchAndSqlTableExists && patch.getPatchId() != null ?
+			        darwinStorage.wasSqlCommandAlreadyExecuted(patch.getPatchId(), sqlCommand, newOccurrence) : SqlScriptStatus.NOT_EXECUTED;
+
 	        if (executionStatus == SqlScriptStatus.EXECUTED_FINISHED) {
                 log.info("Skipping (was already executed before) - occurrence " + newOccurrence + ":\n" + sqlCommand);
             } else {
@@ -80,13 +81,21 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
                 executeSqlCommand(patch, sqlCommand, darwinStorage, executionStatus);
             }
         }
+	    long stop = System.currentTimeMillis();
 
-        if (patchAndSqlTableExists) {
-			long stop = System.currentTimeMillis();
+        // infrastructural tables has been just created
+        if (!patchAndSqlTableExists && storageChecker.existPatchAndSqlTable()) {
+	        final Patch newPatch = darwinStorage.getPatchByResourcePath(resourcePath, componentName);
+	        newPatch.setProcessTime((int)(stop - start));
+	        newPatch.setFinishedOn(LocalDateTime.now());
+	        darwinStorage.markPatchAsFinished(newPatch);
+        } else if (patchAndSqlTableExists) {
 			patch.setProcessTime((int)(stop - start));
 			patch.setFinishedOn(LocalDateTime.now());
 			darwinStorage.markPatchAsFinished(patch);
-		}
+		} else {
+        	throw new IllegalStateException("Infrastructural tables unexpectedly don't exist!");
+        }
     }
 
     /**

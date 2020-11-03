@@ -39,6 +39,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 
 /**
@@ -95,17 +97,17 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 
 	/**
 	 * Initializes Darwin and updates infrastructure tables for it.
-	 * Must be called prior calling {@link #darwinComponent(String, String)}
+	 * Must be called prior calling {@link #updateComponent(String, String)}
 	 */
 	@Override
 	public void afterPropertiesSet() {
 		initDefaults();
 		if (!isSwitchOff()) {
-			//darwin itself first
+			//set up itself first
 			updateMyself();
 
-			//darwin target component
-			darwinComponent(componentDescriptor.getComponentName(), componentDescriptor.getComponentVersion());
+			//set up target component
+			updateComponent(componentDescriptor.getComponentName(), componentDescriptor.getComponentVersion());
 		}
 	}
 
@@ -125,11 +127,13 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
         boolean transactionManagerPresent = beanFactory.containsBean(transactionManagerName);
         boolean lockerPresent = beanFactory.containsBean("locker") && beanFactory.getBean("locker") instanceof Locker;
         if (dataSourcePresent) {
-            // comprehensive check if there isn't only ExternalDependency based proxy
             try {
-                DataSource bean = applicationContext.getBean(dataSourceName, DataSource.class);
-                bean.toString();
-            } catch (NoSuchBeanDefinitionException e) {
+                DataSource ds = applicationContext.getBean(dataSourceName, DataSource.class);
+	            //noinspection EmptyTryBlock
+	            try (final Connection connection = ds.getConnection()) {
+	            	// do nothing we just need to check connection is alive
+	            }
+            } catch (NoSuchBeanDefinitionException | SQLException e) {
                 dataSourcePresent = false;
                 transactionManagerPresent = false;
             }
@@ -193,8 +197,8 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * Performs darwin of specified component to specified version.
      * Uses default resourceMatcher and resourceNameAnalyzer.
      */
-    public void darwinComponent(String componentName, String componentVersion) {
-        darwinComponent(componentName, componentVersion, this.resourceMatcher, this.resourceNameAnalyzer);
+    public void updateComponent(String componentName, String componentVersion) {
+        updateComponent(componentName, componentVersion, this.resourceMatcher, this.resourceNameAnalyzer);
     }
 
     /**
@@ -205,9 +209,9 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * @param resourceMatcher        {@link ResourceMatcher}
      * @param resourceNameAnalyzer   {@link ResourceNameAnalyzer}
      */
-    public void darwinComponent(final String componentName, String componentVersionString,
-                                    final ResourceMatcher resourceMatcher,
-                                    final ResourceNameAnalyzer resourceNameAnalyzer) {
+    public void updateComponent(final String componentName, String componentVersionString,
+                                final ResourceMatcher resourceMatcher,
+                                final ResourceNameAnalyzer resourceNameAnalyzer) {
 		if(switchOff) {
 			if(log.isDebugEnabled()) {
 				log.debug("Darwin is switched off - no data source accessible.");
@@ -219,15 +223,10 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 
 			ensureRunsUniquely(
 					componentName, lastStoredVersion, versionComparator,
-					new Runnable() {
-						@Override
-						public void run() {
-						doUpdateComponent(
-								lastStoredVersion, componentName, resourceMatcher,
-								versionComparator, currentVersion, resourceNameAnalyzer
-						);
-						}
-					}
+					() -> doUpdateComponent(
+							lastStoredVersion, componentName, resourceMatcher,
+							versionComparator, currentVersion, resourceNameAnalyzer
+					)
 			);
 		}
 
@@ -251,41 +250,8 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 		meUpdater.setSkipIfDataSourceNotPresent(skipIfDataSourceNotPresent);
 		meUpdater.setResourceAccessor(resourceAccessor);
 		meUpdater.initDefaults();
-		meUpdater.updateMySelf(myVersion);
+		updateComponent(myVersion.getComponentName(), myVersion.getComponentVersion());
 	}
-
-    /**
-     * Updates specially Darwin itself. It must apply different logic, because internal logic was changed during
-     * life of the library and now uses PATCH table to determine which patches has been already applied. So there is
-     * special jump from version 1.1 to 3.0 in its internal data layer.
-     */
-    private void updateMySelf(SchemaVersion desiredDarwin) {
-		final String componentName = desiredDarwin.getComponentName();
-		final VersionDescriptor existingVersion = darwinStorage.getVersionDescriptorForComponent(componentName);
-		final VersionComparator comparator = new VersionComparator();
-		final VersionDescriptor version_3_0 = new VersionDescriptor("3.0");
-		final VersionDescriptor version_1_1 = new VersionDescriptor("1.1");
-		if (existingVersion != null &&
-				comparator.compare(existingVersion, version_1_1) >= 0 &&
-				comparator.compare(existingVersion, version_3_0) < 0) {
-
-			ensureRunsUniquely(
-					componentName, existingVersion, comparator,
-					new Runnable() {
-						@Override
-						public void run() {
-							storageUpdater.executeScript(
-									storageChecker.getPlatform() + "/patch_3.0.sql",
-									componentName, darwinStorage, storageChecker
-							);
-							darwinStorage.updateVersionDescriptorForComponent(componentName, "3.0");
-						}
-					}
-			);
-
-        }
-        darwinComponent(componentName, desiredDarwin.getComponentVersion());
-    }
 
     /**
      * Method which find version of component, or guess it, or create new record about component
@@ -506,7 +472,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 		String unlockKey = null;
 		try {
 
-			unlockKey = acquireProcessLockKey(componentName, existingVersion, comparator, null, processName);
+			unlockKey = acquireProcessLockKey(componentName, existingVersion, comparator, processName);
 			logic.run();
 
 		} catch(ProcessIsLockedException ignored) {
@@ -533,10 +499,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * @throws ProcessIsLockedException
      */
     private String acquireProcessLockKey(String componentName, VersionDescriptor storedVersion,
-                                         VersionComparator versionComparator, String unlockKey, String processName)
+                                         VersionComparator versionComparator, String processName)
             throws ProcessIsLockedException {
 
-        if (lockFunctionalityAvailable(componentName, storedVersion, versionComparator)) {
+	    String unlockKey = null;
+	    if (lockFunctionalityAvailable(componentName, storedVersion, versionComparator)) {
             int i = 0;
             ProcessIsLockedException lastException = null;
             while (unlockKey == null && i < 20) {
@@ -551,7 +518,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
                 }
             }
 
-            if (unlockKey == null) {
+            if (unlockKey == null && lastException != null) {
                 throw lastException;
             }
         }

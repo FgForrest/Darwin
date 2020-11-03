@@ -19,9 +19,12 @@ import org.springframework.util.DigestUtils;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * Default implementation of the Darwin storage.
@@ -43,7 +46,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 
 	@Override
     public VersionDescriptor getVersionDescriptorForComponent(String componentName) {
-        String versionScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/version.sql");
+        String versionScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/version.sql");
         try {
 			String version = jdbcTemplate.queryForObject(versionScript, String.class, componentName);
 			if(version != null && !version.trim().isEmpty()) {
@@ -69,10 +72,10 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
     public void updateVersionDescriptorForComponent(String componentName, String version) {
         final VersionDescriptor storedVersion = getVersionDescriptorForComponent(componentName);
         if (storedVersion == null) {
-            String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/insert_component.sql");
+            String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_component.sql");
             jdbcTemplate.update(insertScript, componentName, version);
         } else {
-            String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/update_component.sql");
+            String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/update_component.sql");
             jdbcTemplate.update(updateScript, version, componentName);
         }
     }
@@ -101,9 +104,9 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
         try {
 			//tries to insert information about patch to the database - might fail on duplicate key exception
             //if there already is some patch of this name for this component
-            final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/insert_patch.sql");
+            final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_patch.sql");
             sqlCommandWhichThrewException = sql;
-            jdbcTemplate.update(sql, componentName, patchName, 0, detectedOn, null, platform);
+            jdbcTemplate.update(sql, componentName, patchName, 0, detectedOn, null, platform.name());
 
             //insert was ok - we need to load patch from db
             return getPatchFromDb(patchName, componentName, platform);
@@ -137,11 +140,11 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
     @Override
     public void markPatchAsFinished(Patch patch) {
         if (patch.isInDb()) {
-            final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/update_markPatchAsFinished.sql");
+            final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/update_markPatchAsFinished.sql");
             jdbcTemplate.update(
                     sql,
-                    new Date(),
-                    patch.getPatchName(), patch.getComponentName(), patch.getPlatform()
+                    LocalDateTime.now(),
+                    patch.getPatchName(), patch.getComponentName(), patch.getPlatform().name()
             );
         }
     }
@@ -185,21 +188,21 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 
     @Override
     public boolean isAnyPatchRecordedFor(String componentName) {
-        final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/select_isAnyPatchRecordedForComponent.sql");
+        final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/select_isAnyPatchRecordedForComponent.sql");
         int countOfPatchesInDb = jdbcTemplate.queryForList(sql, componentName).size();
         return countOfPatchesInDb != 0;
     }
 
     @Override
     public void insertComponentToDatabase(String componentName) {
-        final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/insert_component.sql");
+        final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_component.sql");
         jdbcTemplate.update(sql, componentName, "1.0");
     }
 
     @Override
     public SqlScriptStatus wasSqlCommandAlreadyExecuted(int patchId, String script, int occurrence) {
 		if (storageChecker.existPatchAndSqlTable()) {
-			final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/select_wasSqlCommandAlreadyExecuted.sql");
+			final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/select_wasSqlCommandAlreadyExecuted.sql");
 			final List<Date> finishedDates = jdbcTemplate.queryForList(
 					sql,
 					Date.class,
@@ -227,7 +230,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 	        if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
 		        return;
 	        }
-            String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/insert_script.sql");
+            String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_script.sql");
             jdbcTemplate.update(
                     sql, patch.getPatchId(), statement, computeHash(statement),
                     processTime, finishedOn,
@@ -243,7 +246,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 			if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
 				return;
 			}
-			String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/update_script.sql");
+			String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/update_script.sql");
 			jdbcTemplate.update(
 					sql,
 					processTime, finishedOn,
@@ -259,17 +262,17 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 
 	private Patch getPatchFromDb(String patchName, String componentName, Platform platform) {
 		try {
-			final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform() + "/select_patchFromDb.sql");
+			final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/select_patchFromDb.sql");
 			return jdbcTemplate.queryForObject(
 					sql,
-					new Object[]{patchName, componentName, platform.getFolderName()},
+					new Object[]{patchName, componentName, platform.name()},
 					(rs, rowNum) -> new Patch(
 							rs.getInt("id"),
 							rs.getString("patchName"),
 							rs.getString("componentName"),
-							rs.getObject("detectedOn", LocalDateTime.class),
+							rs.getTimestamp("detectedOn").toLocalDateTime(),
 							Platform.identify(rs.getString("platform")),
-							rs.getObject("finishedOn", LocalDateTime.class)
+							ofNullable(rs.getTimestamp("finishedOn")).map(Timestamp::toLocalDateTime).orElse(null)
 					));
 		} catch (EmptyResultDataAccessException ignored) {
 			//no patch exists in database

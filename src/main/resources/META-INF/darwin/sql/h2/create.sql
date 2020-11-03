@@ -19,8 +19,8 @@ CREATE TABLE DARWIN_PATCH
     componentName VARCHAR(255) NOT NULL,
     patchName VARCHAR(100) NOT NULL,
     processTime INT(11),
-    detectedOn DATE NOT NULL,
-    finishedOn DATE,
+    detectedOn TIMESTAMP NOT NULL,
+    finishedOn TIMESTAMP,
     platform VARCHAR(10),
     CONSTRAINT CNFK_PATCH_DARWIN FOREIGN KEY (componentName) REFERENCES DARWIN (component) ON DELETE CASCADE
 );
@@ -36,7 +36,7 @@ CREATE TABLE DARWIN_SQL
     statementHash VARCHAR(64) NULL,
     statement MEDIUMTEXT NOT NULL,
     processTime INT(11),
-    finishedOn DATETIME,
+    finishedOn TIMESTAMP,
     exception MEDIUMTEXT,
     CONSTRAINT CNPK_ID PRIMARY KEY (id),
     CONSTRAINT CNFK_SQL_PATCH FOREIGN KEY (patchId) REFERENCES DARWIN_PATCH (id) ON DELETE CASCADE

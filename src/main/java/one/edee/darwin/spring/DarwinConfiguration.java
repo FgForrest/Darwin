@@ -21,10 +21,10 @@ public class DarwinConfiguration {
 	@Autowired private ApplicationContext applicationContext;
 
 	@Bean
-	public Darwin dbAutoUpdater() {
+	public Darwin darwin() {
 		return new DarwinBuilder(applicationContext, Darwin.DARWIN_COMPONENT_NAME, Darwin.DARWIN_COMPONENT_VERSION)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(dbAutoUpdateResourceAccessor())
+				.withResourceAccessor(darwinUpdateResourceAccessor())
 				.withLocker(locker())
 				.build();
 	}
@@ -33,12 +33,12 @@ public class DarwinConfiguration {
 	public Locker locker() {
 		return new LockerBuilder(applicationContext)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(dbAutoUpdateResourceAccessor())
+				.withResourceAccessor(darwinUpdateResourceAccessor())
 				.build();
 	}
 
 	@Bean
-	public ResourceAccessor dbAutoUpdateResourceAccessor() {
+	public ResourceAccessor darwinUpdateResourceAccessor() {
 		return new DefaultResourceAccessor(
 				applicationContext, "UTF-8",
 				"classpath:META-INF/darwin/sql/"

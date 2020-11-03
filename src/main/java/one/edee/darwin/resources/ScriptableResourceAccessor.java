@@ -37,7 +37,7 @@ public class ScriptableResourceAccessor extends DefaultResourceAccessor {
 		} else {
 			try {
 				Template template = new Template(
-						"dbAutoUpdateTempTemplate",
+						"darwinUpdateTempTemplate",
 						new StringReader(text),
 						cfg
 				);

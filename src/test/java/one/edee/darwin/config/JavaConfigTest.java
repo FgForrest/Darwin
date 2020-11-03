@@ -1,7 +1,5 @@
 package one.edee.darwin.config;
 
-import com.fg.support.test.AbstractSpringTestCase;
-import com.fg.support.test.AnnotationHostConfigurableContextLoader;
 import one.edee.darwin.Darwin;
 import one.edee.darwin.locker.Locker;
 import one.edee.darwin.resources.ResourceAccessor;
@@ -16,10 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(
-	classes = DarwinConfiguration.class,
-	loader = AnnotationHostConfigurableContextLoader.class
+	classes = DarwinConfiguration.class
 )
-public class JavaConfigTest extends AbstractSpringTestCase {
+public class JavaConfigTest {
 	@Autowired private Darwin darwin;
 	@Autowired private Locker locker;
 	@Autowired private ResourceAccessor dbResourceAccessor;

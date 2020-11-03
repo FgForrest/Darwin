@@ -1,4 +1,4 @@
-package one.edee.darwin.utils.h2;
+package one.edee.darwin.utils.oracle;
 
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.utils.AbstractPlatformTest;
@@ -9,13 +9,13 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * @author Radek Salay, FG Forest a.s. 7/14/16.
  */
-@ActiveProfiles(value = "H2")
-@Profile(value = "H2")
-public class AbstractPlatformTestH2 extends AbstractPlatformTest {
+@ActiveProfiles(value = "ORACLE")
+@Profile(value = "ORACLE")
+public class PlatformTestOracle extends AbstractPlatformTest {
 
     @Test
     public void shouldRecognizeCorrectPlatform() {
-        assertPlatform(Platform.H2);
+        assertPlatform(Platform.ORACLE);
     }
 
 }
