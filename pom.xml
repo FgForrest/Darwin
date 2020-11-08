@@ -3,7 +3,7 @@
 	<groupId>one.edee.oss</groupId>
 	<artifactId>darwin</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>Database Schema Evolution mechanism in a tiny library</name>
 
 	<developers>
@@ -187,6 +187,14 @@
 						<version>${junit-platform.version}</version>
 					</dependency>
 				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.2.0</version>
+				<configuration>
+					<doclint>none</doclint>
+				</configuration>
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>

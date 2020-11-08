@@ -12,9 +12,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Transaction database implementation.<br/>
+ * Transaction database implementation.
  * In this implementation is used TransactionTemplate which wraps DB calls so it could be defined, whether Lock persister runs
- * in separate transaction or not.<br/>
+ * in separate transaction or not.
  * If TransactionTemplate is not provided, direct calls are made (e.g. TransactionManager doesn't exist and so
  * TransactionTemplate simply cannot be created).
  *

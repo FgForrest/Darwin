@@ -9,6 +9,10 @@ public interface StorageUpdater {
 
     /**
      * Executes update script.
+     * @param resourcePath
+     * @param componentName
+     * @param darwinStorage
+     * @param storageChecker
      */
     void executeScript(String resourcePath, String componentName,
                        DarwinStorage darwinStorage, StorageChecker storageChecker);

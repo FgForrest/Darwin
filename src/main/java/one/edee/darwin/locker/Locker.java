@@ -160,7 +160,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * @param resourceLoader implementation for loading Spring {@link org.springframework.core.io.Resource}
      * @return default {@link LockStorage} implementation
      */
-    public static LockStorage createDefaultLockPersister(
+    public static LockStorage createDefaultLockStorage(
             DataSource ds, PlatformTransactionManager transactionManager,
             ResourceAccessor resourceAccessor, ResourceLoader resourceLoader) {
         final DefaultDatabaseLockStorage lockPersister = new DefaultDatabaseLockStorage();
@@ -189,7 +189,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             final PlatformTransactionManager transactionManager = transactionManagerPresent ?
                     (PlatformTransactionManager) applicationContext.getBean(transactionManagerName) : null;
             if (lockStorage == null) {
-                lockStorage = createDefaultLockPersister(ds, transactionManager, resourceAccessor, applicationContext);
+                lockStorage = createDefaultLockStorage(ds, transactionManager, resourceAccessor, applicationContext);
             }
         } else {
             if (skipIfDataSourceNotPresent) {
@@ -204,6 +204,9 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     /**
      * Returns true if process can be leased. Result is not guaranteed though - method may return TRUE at one time
      * and event then leasing attempt in the next second may fail.
+     *
+     * @param processName
+     * @return
      */
     public boolean canLease(String processName) {
         return lockStorage.getProcessLock(processName, normalizeDate(LocalDateTime.now())) != LockState.LEASED;
