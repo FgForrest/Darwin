@@ -5,14 +5,10 @@ import one.edee.darwin.DarwinBuilder;
 import one.edee.darwin.locker.Locker;
 import one.edee.darwin.resources.ResourceAccessor;
 import one.edee.darwin.resources.ResourceAccessorForTest;
-import one.edee.darwin.resources.ScriptableResourceAccessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * No extra information provided - see (selfexplanatory) method signatures.
@@ -30,20 +26,6 @@ public class DarwinTestConfiguration {
 		darwin.withResourceAccessor(realDarwinResourceAccessor());
 		return darwin.build();
 	}
-
-@Bean
-public Darwin adam(ApplicationContext applicationContext) {
-	final ScriptableResourceAccessor resourceAccessor = new ScriptableResourceAccessor(
-			applicationContext, "utf-8", "classpath:/META-INF/adam/sq/"
-	);
-	final Map<String, Object> variables = new HashMap<>();
-	variables.put("prefix", "SOME_PREFIX");
-	variables.put("loop_count", 5);
-	resourceAccessor.setVars(variables);
-	return new DarwinBuilder(applicationContext, "adam", "1.0")
-			.withResourceAccessor(resourceAccessor)
-			.build();
-}
 
 	@Bean
 	public Locker locker() {
