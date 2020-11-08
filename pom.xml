@@ -3,7 +3,7 @@
 	<groupId>one.edee.oss</groupId>
 	<artifactId>darwin</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>Database Schema Evolution mechanism in a tiny library</name>
 
 	<developers>
