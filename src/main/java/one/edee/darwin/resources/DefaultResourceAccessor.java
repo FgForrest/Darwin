@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.ResourceVersionComparator;
-import org.apache.commons.io.IOUtils;
+import one.edee.darwin.storage.IOUtils;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -13,6 +13,7 @@ import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,7 +26,7 @@ import java.util.StringTokenizer;
  */
 @Data
 @CommonsLog
-public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAccessor {
+public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAccessor, IOUtils {
 	private static final String DESCRIPTOR_FILE = "descriptor.txt";
 	private static final char SEMICOLON = ';';
 	private static final char SINGLE_APOSTROPHE = '\'';
@@ -172,7 +173,7 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 	protected String readResource(String resourceName, String normalizedPath, Resource resource) {
 		if(resource.exists()) {
 			try (final InputStream is = resource.getInputStream()) {
-				final String content = IOUtils.toString(is, encoding).trim();
+				final String content = toString(is, Charset.forName(encoding)).trim();
 				if(content.endsWith(";")) {
 					return content.substring(0, content.length() - 1);
 				}
@@ -199,7 +200,7 @@ public class DefaultResourceAccessor implements ResourceLoaderAware, ResourceAcc
 		final Resource resource = resolver.getResource(normalizedPath + DESCRIPTOR_FILE);
 		if(resource.exists()) {
 			try (final InputStream is = resource.getInputStream()) {
-				final String list = IOUtils.toString(is, encoding);
+				final String list = toString(is, Charset.forName(encoding));
 				final List<Resource> result = new LinkedList<>();
 
 				for(StringTokenizer st = new StringTokenizer(list, "\n", false); st.hasMoreTokens(); ) {

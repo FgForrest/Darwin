@@ -1,83 +1,100 @@
-# Princip fungování
+# Darwin - helps to evolve your database schema
 
-## Automatická aktualizace databáze
+Darwin is one of our oldest libraries, which we still use extensively - its origins date back to 2007. It allows easy 
+evolution of the data model for your application. Darwin runs migration SQL scripts in a specific dialect according 
+to clearly defined rules. It probably originated much earlier than the open-source variants of 
+[Liquibase](https://www.liquibase.org/) or [FlywayDB](https://flywaydb.org/). It is also much simpler, but it represents 
+a reliable "[Kalashnikov](https://en.wikipedia.org/wiki/AK-47)" for us, which is universal and reliable in its 
+simplicity.
 
-Základním stavebním kamenem je třída AutoUpdater - ta je deklarovaná jako InitializingBean, což znamená, že ihned po jejím 
-vytvoření proběhne aplikace její logiky. AutoUpdater si zjistí nad jakou platformou (databází) běží dle použitého datasource 
-(respektive package driveru, který je pro připojení k data sourcu použit).
+***Disclaimer:** we took original source code that works for more than 13 years in production and updated it to JDK 8 version
+and up-to-date Java classes and Spring framework. Architecture, design and tests are mostly originates several years ago.*
 
-Dále se koukne do databáze, zda tam existuje tabulka `DARWIN`, ve které si ukládá názvy a verze komponent, které se 
-skrze tuto knihovnu aktualizují. Pokud tabulka neexistuje, je založena. Do této tabulky si ihned uloží také svou vlastní 
-verzi - knihovna totiž umí stejným způsobem, jakým vytváří / aktualizuje databáze pro ostatní knihovny, aktualizovat i sama sebe.
+The library allows you to maintain SQL scripts on classpath, allowing you to create the tables that your application 
+needs, not only for one specific database, but for different ones at once (ie in parallel you can maintain 
+both MySQL and Oracle schema for your universal libraries). Darwin decides which one to apply after starting 
+the application and finding out the database type from the [DataSource](https://docs.oracle.com/javase/7/docs/api/javax/sql/DataSource.html) 
+object.
 
-Výše uvedená logika se aplikuje pouze tím, že ve svém spring konfiguračním souboru uvedete import konfigurace z 
-*classpath:/META-INF/darwin/spring/db-autoupdate-config.xml.*
+As you further develop your application, you will soon find that the existing table structure does not suit you and 
+needs to be expanded or changed. To do this, all you have to do is to save the so-called patch files in the Darwin folder, 
+containing in your name the version number of the application for which this structure is needed. The next time you 
+start the application, Darwin will compare the current version of your application (ie the one you just started) with 
+the version it last applied to the database schema. If the application version is newer, it finds all patches between 
+the two versions and applies them to the schema one by one.
 
-Stejná logika se aplikuje i na vaši knihovnu. Instanciujete beanu AutoUpdateru, dodáte třídu, která AutoUpdateru poskytne 
-základní informace o vaší knihovně - tzn. unikátní název a aktuální verzi knihovny. Na základě těchto dat si AutoUpdater 
-ve své tabulce ověří, zda má pro vaši komponentu vytvořen datový model a v jaké verzi. Pokud nemá - založí jej, pokud má, 
-porovná verzi načtenou ze své tabulky s verzí, kterou mu vrátí vaše beana - pokud se verze liší (tzn. vaše knihovna má 
-vyšší verzi, než ta uložená v databázi), provede se aplikování všech patchů mezi těmito dvěma verzemi.
+At the same time, Darwin pays close attention to the "transactionality" of changes, and even if the database does not 
+support transaction for schema changes (ie it cannot properly roll back DDL SQL statements), it remembers which SQL 
+statements it actually executed as part of the patch and which did not. Thanks to this, it can start its activity even 
+in the middle of a half-applied patch. This is especially handy in the development phase.
 
-VersionComparator se stará o porovnávání dvou verzí. Dokáže porovnávat verze z více fragmentů i s textovými částmi. Uvádím 
-výňatek z testu: *1.1 > 1.0, 1.0-SNAPSHOT = 1.0, 1.1.1 > 1.1, 1.1-alfa > 1.1-beta, 1.1-alfa-2 > 1.1-alfa-1*
+The library allows for a modular approach, so it can be instantiated in the application, for example, 20 times 
+for different shared libraries.
 
-Soubory s SQL příkazy jsou hledány ve složce, kterou uvedete v beaně com.fg.autoupdate.resources.DefaultResourceAccessor 
-v property resourcePath. Lépe řečeno ve výchozí implementaci nejsou tyto soubory hledány přímo v této složce ale **podsložce 
-použité databázové platformy**. Tzn. pokud uvedete cestu ke složce /META-INF/lib_user/sql a pracujete nad MySQL databází, 
-bude DefaultResourceAccessor hledat SQL soubory ve složce /META-INF/lib_user/sql/mysql/* - tímto způsobem můžete svoji 
-knihovnu jednoduše portovat nad různé databáze.
+Darwin also pays great attention to the traceability of everything he has done with your database. All statements he 
+executed at your instruction are logged in its tables with all necessary information such as the date the patch was 
+discovered in the application, the date the patch was applied to the db, the duration of individual SQL statements, 
+any exception that fell out of the database when much more.
 
-AutoUpdater používá pro nalezení správných souborů s SQL příkazy rozhraní `ResourceNameAnalyzer`. Defaultní implementace 
-hledá soubor **create.sql**  s příkazy pro založení struktury vaší komponenty. V případě rozdílů mezi verzemi hledá jakékoliv 
-soubory s názvy ve formátu **patch_verze.sql**, kde verze je např **1.1**.
+Darwin also includes a [Locker](src/main/java/one/edee/darwin/locker/Locker.java) tool that allows you to synchronize 
+tasks within a cluster if a shared database exists. Darwin uses this [Locker](src/main/java/one/edee/darwin/locker/Locker.java) 
+class to apply SQL patches to only one of the nodes when running the same application on multiple 
+nodes in a cluster at the same time, and the other instances of Darwin obediently wait for the migration to complete. 
+However, you can use the tool for other purposes. For example, we use it relatively actively to control the execution 
+of asynchronous tasks not only within the cluster, but also on one instance of the JVM.
 
-Pokud si tedy vezmeme příklad, že v databázi máte strukturu své knihovny ve verzi 1.0 a nově se instaluje knihovna verze 
-2.0 bude auto updater aplikovat všechny patche mezi těmito verzemi. Například tedy: patch_1.1.sql, patch_1.6.7.sql atd.
+For more information see section [How to use](#how-to-use)
 
-Téměř cokoliv, co používá AutoUpdater je zakryté interfacy, takže pokud vám nevyhovuje způsob načítání SQL příkazů, 
-aplikování příkazů nad databází aj., můžete si vytvořit vlastní implementace a jednoduše přes settery ty původní nahradit.
+## Prerequisites
 
-Aktualizace používá pro běh synchronizaci (viz. další kapitola) - tzn. je bezpečná i v prostředí clusteru. Aktualizace se 
-při svém spuštění snaží získat zámek, aby si pouze jeden thread zajistil exklusivní přístup k databázi pro případ, že by 
-byl autoupdater spuštěn najednou ve více vláknech. Pokud se mu nepodaří zámek získat opakuje pokus o získání zámku ještě 
-20x vždy po 5 vteřinách. Terpve potom vyhodí vyjímku a ukončí se.
+- JDK 1.8+
+- Commons Logging (1.2.0+)
+- Spring framework (5.3.0+), works also on 4.3.X olders version although not compilable due to JUnit tests
 
-### Integrace do projektů s existující datovou strukturou
+## Supported databases
 
-AutoUpdater můžete také použít i v projektech, kde již existuje nějaká datová struktura. Standardně vytvoříte **create.sql** 
-skript a sadu patchů stejně jako kdyby byla databáze prázdná. Následně přidáte jeden nebo více **guess_version.sql** skriptů, 
-které AutoUpdater použije k zjištění verze existující datové struktury.
+- MySQL
+- Oracle
+- H2
 
-Postup zjišťování je následující. V případě, že AutoUpdater nebude mít záznam ve své interní tabulce o existenci vámi 
-instalované komponenty, dřív než použije create.sql skript, se pokusí najít všechny skripty začínající řetězcem guess 
-(např. guess_1.0.sql, guess_2.1.0.sql apod.) a začne je spouštět v pořadí od nejnižší verze po verzi nejvyšší. Poslední skript, 
-který neskončí vyjímkou (nebo v případě, že guess začíná na `select count` a bude vracet počet výšší než 0) bude považován 
-za skript určující verzi existující datové struktury a místo, aby použil skript create.sql, uloží jen uhádnuté číslo 
-verze modulu (bere se z názvu guess skriptu) do své interní tabulky.
+Do you missing one? Fill a pull request!
 
-Tímto způsobem se lze jednoduše napojit na existující datovou strukturu.
+## How to compile
 
-## Verze 1.12.0
+Use standard Maven 3 command:
 
-Od verze 1.12.0 db_autoupdater ignoruje SQL komentáře.
+```
+mvn clean install
+```
 
-např: -- ignoruj tento řádek
+## How to run tests
 
-## Verze 3.0.0
+Start databases:
 
-Hlavní změna je v rozšíření o aplikaci db patchu nikoliv primárně podle verze, ale podle vazby zda byla patch aplikován či nikoliv.
+```
+docker-compose -f docker/docker-compose.yml up 
+```
 
-Nově AutoUpdater umí:
+Run your tests in IDE or run:
 
-* v tabulce `DARWIN_PATCH` je historie kompletně i částečně provedených patchů
-* v tabulce `DARWIN_SQL` je historie provedených SQL příkazů a případnou vyjímku vrácenou DB
-* dokáže aplikovat i všechny chybějící patche, tj. pokud již bude aplikován patch 2.2 a nově se mu na classpath objeví patch 2.1, pokusí se jej zpětně aplikovat
-* dokáže navázat aplikování patchů i z prostřed SQL souboru (bude porovnávat SQL příkaz proti těm, co už provedl)
-* vede si informaci o tom, jak dlouho mu provedení toho konkrétního SQL / patche trvalo
-* vede si informaci o tom, kdy konkrétně dané SQL/patch provedl a kdy se o něm poprvé dozvěděl
+```
+mvn clean test
+```
 
-Poznámka
+Help us maintain at least 80% code coverage!
 
-Pokud narazíte na problémy se zpětnou aplikací patchů dle nové logiky, pak vymazaním tablky `DARWIN_PATCH` použije 
-knihovna pouze informace o verzích komponent jako dříve.
+## How to use
+
+See separate chapters for details:
+
+- [How to integrate to your project](src/main/resources/META-INF/darwin/docs/how-to-integrate-to-your-project.md)
+- [How to create migration scripts](src/main/resources/META-INF/darwin/docs/how-to-create-migration-scripts.md)
+- [How to switch to Darwin with existing database](src/main/resources/META-INF/darwin/docs/how-to-introduce-darwin-to-existing-db.md)
+- [How to make programmable scripts](src/main/resources/META-INF/darwin/docs/how-to-make-programmable-scripts.md)
+- [How to user locker for intra-cluster synchronization](src/main/resources/META-INF/darwin/docs/how-to-use-locker-synchronization.md)
+
+## Implementation notes:
+
+- [Versioning rules](src/main/resources/META-INF/darwin/docs/versioning.md)
+- [Patch content rules and escaping](src/main/resources/META-INF/darwin/docs/content-rules.md)
+- [Infrastructural tables](src/main/resources/META-INF/darwin/docs/infrastructural-tables.md)

@@ -16,7 +16,6 @@ import one.edee.darwin.storage.DefaultDatabaseStorageCheckerTest.TestConfigurati
 import one.edee.darwin.utils.DarwinTestHelper;
 import one.edee.darwin.utils.spring.DarwinTestConfiguration;
 import one.edee.darwin.utils.spring.DataSourceConfiguration;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
                 TestConfiguration.class
         }
 )
-public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTest {
+public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTest implements IOUtils {
     @Autowired private DarwinStorage darwinStorage;
     @Autowired private Darwin darwin;
     @Autowired private DefaultDatabaseStorageChecker tested;
@@ -61,7 +60,7 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
     public void testGuessVersionBySelect() throws Exception {
         final Platform platform = getPlatformFromJdbcUrl(getJdbcTemplate().getDataSource());
         try (final InputStream is = new ClassPathResource("META-INF/darwin/sql-test/guess/" + platform.getFolderName() + "/init.sql").getInputStream()) {
-            String sql = IOUtils.toString(is, StandardCharsets.UTF_8);
+            String sql = toString(is, StandardCharsets.UTF_8);
             getJdbcTemplate().update(sql);
             DefaultDatabaseStorageChecker storageChecker = new DefaultDatabaseStorageChecker(
                     new ResourcePatchMediator(

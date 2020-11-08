@@ -3,7 +3,7 @@ package one.edee.darwin.resources;
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.resources.DefaultResourceAccessorTest.TestConfiguration;
-import org.apache.commons.io.IOUtils;
+import one.edee.darwin.storage.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 				TestConfiguration.class
 		}
 )
-public class DefaultResourceAccessorTest extends AbstractDarwinTest {
+public class DefaultResourceAccessorTest extends AbstractDarwinTest implements IOUtils {
 
     @Autowired
     @Qualifier("darwinResourceAccessor")
@@ -288,7 +288,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     public void testAlterInsert() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/alter-insert.sql");
 
-        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
+        String sql = toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> queries = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(4, queries.size());
     }
@@ -299,7 +299,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     @Test
     public void testTokenizeVeryLargeSQLScript() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/verylarge.sql");
-        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
+        String sql = toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> queries = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(12185, queries.size());
     }
@@ -318,7 +318,7 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     @Test
     public void testTokenizeSQLScriptContentWithCommentInsideSQL() throws Exception {
         ClassPathResource sqlResource = new ClassPathResource("/META-INF/darwin/sql-test/upgrade/mysql/commentInsideSqlScript.sql");
-        String sql = IOUtils.toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
+        String sql = toString(sqlResource.getInputStream(), StandardCharsets.UTF_8);
         List<String> result = darwinResourceAccessor.tokenizeSQLScriptContent(sql);
         assertEquals(1, result.size());
         assertTrue(result.get(0).startsWith("CREATE TABLE T_FORUM_TOPIC ("));
