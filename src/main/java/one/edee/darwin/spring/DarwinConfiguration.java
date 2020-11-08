@@ -4,7 +4,6 @@ import one.edee.darwin.Darwin;
 import one.edee.darwin.DarwinBuilder;
 import one.edee.darwin.locker.Locker;
 import one.edee.darwin.locker.LockerBuilder;
-import one.edee.darwin.resources.ResourceAccessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -20,19 +19,17 @@ public class DarwinConfiguration {
 	@Autowired private ApplicationContext applicationContext;
 
 	@Bean
-	public Darwin darwin(ResourceAccessor resourceAccessor) {
+	public Darwin darwin() {
 		return new DarwinBuilder(applicationContext, Darwin.DARWIN_COMPONENT_NAME, Darwin.DARWIN_COMPONENT_VERSION)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(resourceAccessor)
-				.withLocker(locker(resourceAccessor))
+				.withLocker(locker())
 				.build();
 	}
 
 	@Bean
-	public Locker locker(ResourceAccessor resourceAccessor) {
+	public Locker locker() {
 		return new LockerBuilder(applicationContext)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(resourceAccessor)
 				.build();
 	}
 

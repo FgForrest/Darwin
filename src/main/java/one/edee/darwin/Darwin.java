@@ -36,7 +36,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -117,9 +116,15 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * Other objects are created and wired by this method.
      */
     public void initDefaults() {
-        Assert.notNull(resourceAccessor, "Darwin needs dbResourceAccessor property to be not null!");
-        Assert.notNull(resourceMatcher, "Darwin needs resourceMatcher property to be not null!");
-        Assert.notNull(resourceNameAnalyzer, "Darwin needs resourceNameAnalyzer property to be not null!");
+	    if (this.resourceAccessor == null) {
+		    this.resourceAccessor = new DefaultResourceAccessor(applicationContext, "UTF-8", "classpath:/META-INF/darwin/sql/");
+	    }
+	    if (this.resourceMatcher == null) {
+	    	this.resourceMatcher = new DefaultResourceMatcher();
+	    }
+	    if (this.resourceNameAnalyzer == null) {
+	    	this.resourceNameAnalyzer = new DefaultResourceNameAnalyzer();
+	    }
 
         //defaults
 		final ConfigurableListableBeanFactory beanFactory = ((AbstractApplicationContext) applicationContext).getBeanFactory();

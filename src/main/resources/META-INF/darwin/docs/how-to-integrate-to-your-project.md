@@ -6,7 +6,7 @@ Include Darwin library in your Maven descriptor (`pom.xml`):
 <dependency>   
     <groupId>one.edee.oss</groupId>   
     <artifactId>darwin</artifactId>   
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
@@ -14,7 +14,7 @@ Or Gradle:
 
 ```
 dependencies {
-    compile 'one.edee.oss:darwin:1.0.0'
+    compile 'one.edee.oss:darwin:1.0.1'
 }
 ```
 

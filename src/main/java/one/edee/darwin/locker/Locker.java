@@ -6,6 +6,7 @@ import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.exception.ProcessIsLockedException;
 import one.edee.darwin.locker.internal.CheckLockTimerTask;
 import one.edee.darwin.model.LockState;
+import one.edee.darwin.resources.DefaultResourceAccessor;
 import one.edee.darwin.resources.ResourceAccessor;
 import one.edee.darwin.storage.DefaultDatabaseLockStorage;
 import one.edee.darwin.storage.LockStorage;
@@ -178,7 +179,9 @@ public class Locker implements InitializingBean, ApplicationContextAware {
 
     @Override
     public void afterPropertiesSet() {
-        Assert.notNull(resourceAccessor, "Locker needs resourceAccessor property to be not null!");
+        if (resourceAccessor == null) {
+            this.resourceAccessor = new DefaultResourceAccessor(applicationContext, "UTF-8", "classpath:/META-INF/darwin/sql/");
+        }
 
         //defaults
         final ConfigurableListableBeanFactory beanFactory = ((AbstractApplicationContext) applicationContext).getBeanFactory();
