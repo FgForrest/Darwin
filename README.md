@@ -49,7 +49,7 @@ For more information see section [How to use](#how-to-use)
 
 - JDK 1.8+
 - Commons Logging (1.2.0+)
-- Spring framework (5.3.0+), works also on 4.3.X olders version although not compilable due to JUnit tests
+- Spring framework (5.3.0+), works also on 4.3.X older version although not compilable due to JUnit tests
 
 ## Supported databases
 
