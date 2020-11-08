@@ -1,11 +1,17 @@
 package one.edee.darwin.storage;
 
+import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.LockState;
+import one.edee.darwin.model.Platform;
 import org.springframework.dao.EmptyResultDataAccessException;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Default database implementation for {@link one.edee.darwin.locker.Locker}.
@@ -14,10 +20,30 @@ import java.time.LocalDateTime;
  */
 @CommonsLog
 public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage {
+	private static final Map<LockStorageStatementWithPlatform, String> STATEMENTS_CACHE = new ConcurrentHashMap<>();
+
+	@RequiredArgsConstructor
+	private enum LockStorageStatement {
+		LOCK_CHECK("lock_check.sql"),
+		LOCK_CURRENT_TIME("lock_current_time.sql"),
+		LOCK_DELETE("lock_delete.sql"),
+		LOCK_INSERT("lock_insert.sql"),
+		LOCK_UPDATE("lock_update.sql");
+
+		@Getter private final String fileName;
+	}
+
+	@Data
+	private static class LockStorageStatementWithPlatform {
+		private final LockStorageStatement statementType;
+		private final Platform platform;
+	}
 
 	@Override
     protected LockState getDbProcessLock(final String processName, final LocalDateTime currentDate) {
-		final String checkScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_check.sql");
+		final String checkScript = STATEMENTS_CACHE.computeIfAbsent(
+				getKey(LockStorageStatement.LOCK_CHECK), this::readContentFromResource
+		);
 		try {
 			final LocalDateTime leaseUntil = jdbcTemplate.queryForObject(checkScript, new Object[]{processName}, LocalDateTime.class);
 			if(leaseUntil != null) {
@@ -45,14 +71,18 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 
 	@Override
     protected LockState createDbLock(final String processName, final LocalDateTime until, final String unlockKey) {
-		final String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_insert.sql");
+		final String insertScript = STATEMENTS_CACHE.computeIfAbsent(
+				getKey(LockStorageStatement.LOCK_INSERT), this::readContentFromResource
+		);
 		jdbcTemplate.update(insertScript, processName, java.sql.Timestamp.valueOf(until), unlockKey);
 		return LockState.LEASED;
 	}
 
 	@Override
     protected LockState releaseDbProcess(final String processName, final String unlockKey) throws IllegalStateException {
-		final String deleteScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_delete.sql");
+		final String deleteScript = STATEMENTS_CACHE.computeIfAbsent(
+				getKey(LockStorageStatement.LOCK_DELETE), this::readContentFromResource
+		);
 		if (jdbcTemplate.update(deleteScript, processName, unlockKey) == 0) {
 			final String msg = "No lock for process" + processName + " and unlockKey " + unlockKey + " was found!";
 			log.error(msg);
@@ -63,11 +93,25 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 
 	@Override
     protected LockState renewDbLease(final LocalDateTime until, final String processName, final String unlockKey) {
-		final String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_update.sql");
+		final String updateScript = STATEMENTS_CACHE.computeIfAbsent(
+				getKey(LockStorageStatement.LOCK_UPDATE), this::readContentFromResource
+		);
 		if (jdbcTemplate.update(updateScript, java.sql.Timestamp.valueOf(until), processName, unlockKey) > 0) {
 			return LockState.LEASED;
 		} else {
 			return LockState.AVAILABLE;
 		}
 	}
+
+	private LockStorageStatementWithPlatform getKey(LockStorageStatement statementType) {
+		return new LockStorageStatementWithPlatform(statementType, getPlatform());
+	}
+
+	private String readContentFromResource(LockStorageStatementWithPlatform statementTypeWithPlatform) {
+		return dbResourceAccessor.getTextContentFromResource(
+				statementTypeWithPlatform.getPlatform().getFolderName() + "/" +
+						statementTypeWithPlatform.getStatementType().getFileName()
+		);
+	}
+
 }
