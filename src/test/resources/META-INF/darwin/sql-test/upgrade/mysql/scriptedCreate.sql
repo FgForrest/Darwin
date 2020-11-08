@@ -1,4 +1,4 @@
-create table T_DB_${tablePrefix}AUTOUPDATE
+create table ${tablePrefix}DARWIN
 (
 	id integer not null auto_increment,
 	component varchar(255) not null,

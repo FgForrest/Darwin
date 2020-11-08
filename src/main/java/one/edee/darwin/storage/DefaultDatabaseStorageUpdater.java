@@ -14,7 +14,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +115,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 					// if implicit commit will not occur and exception is thrown another update in catch clause will reset finished date to NULL again
 					darwinStorage.insertSqlScriptToDB(
 							patch,
-							new SqlCommand(patch.getPatchId(), sqlStatement, 0, new Date(), null)
+							new SqlCommand(patch.getPatchId(), sqlStatement, 0, LocalDateTime.now(), null)
 					);
 				}
 			}
@@ -126,7 +125,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 
 	        if (patch.isInDb()) {
 		        darwinStorage.updateSqlScriptInDB(patch, new SqlCommand(patch.getPatchId(),
-				        sqlStatement, System.currentTimeMillis() - startScript, new Date(), null));
+				        sqlStatement, System.currentTimeMillis() - startScript, LocalDateTime.now(), null));
 	        }
 
         } catch (final DataAccessException ex) {

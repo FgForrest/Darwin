@@ -70,7 +70,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	@Getter @Setter private String dataSourceName = "dataSource";
 	@Getter @Setter private String transactionManagerName = "transactionManager";
 	@Getter @Setter private ResourceAccessor resourceAccessor;
-	@Getter @Setter private SchemaVersionProvider componentDescriptor;
+	@Getter @Setter private SchemaVersionProvider modelVersion;
 	@Getter @Setter private boolean skipIfDataSourceNotPresent;
 	@Getter @Setter private boolean switchOff;
 	@Getter @Setter private Locker locker;
@@ -91,7 +91,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	/**
 	 * Executes darwin instance logic.
 	 */
-	public void apply() {
+	public void evolve() {
     	afterPropertiesSet();
 	}
 
@@ -107,7 +107,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 			updateMyself();
 
 			//set up target component
-			updateComponent(componentDescriptor.getComponentName(), componentDescriptor.getComponentVersion());
+			updateComponent(modelVersion.getComponentName(), modelVersion.getComponentVersion());
 		}
 	}
 
@@ -194,10 +194,10 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
     }
 
     /**
-     * Performs darwin of specified component to specified version.
+     * Performs model evolution of specified component to specified version.
      * Uses default resourceMatcher and resourceNameAnalyzer.
      */
-    public void updateComponent(String componentName, String componentVersion) {
+    private void updateComponent(String componentName, String componentVersion) {
         updateComponent(componentName, componentVersion, this.resourceMatcher, this.resourceNameAnalyzer);
     }
 
@@ -209,7 +209,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * @param resourceMatcher        {@link ResourceMatcher}
      * @param resourceNameAnalyzer   {@link ResourceNameAnalyzer}
      */
-    public void updateComponent(final String componentName, String componentVersionString,
+    private void updateComponent(final String componentName, String componentVersionString,
                                 final ResourceMatcher resourceMatcher,
                                 final ResourceNameAnalyzer resourceNameAnalyzer) {
 		if(switchOff) {
@@ -244,7 +244,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 		final SchemaVersion myVersion = new SchemaVersion(DARWIN_COMPONENT_NAME, DARWIN_COMPONENT_VERSION);
 		final Darwin meUpdater = new Darwin();
 		meUpdater.setApplicationContext(applicationContext);
-		meUpdater.setComponentDescriptor(myVersion);
+		meUpdater.setModelVersion(myVersion);
 		meUpdater.setDataSourceName(dataSourceName);
 		meUpdater.setTransactionManagerName(transactionManagerName);
 		meUpdater.setSkipIfDataSourceNotPresent(skipIfDataSourceNotPresent);

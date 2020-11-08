@@ -1,1 +1,0 @@
-SELECT statementHash FROM DARWIN_SQL;

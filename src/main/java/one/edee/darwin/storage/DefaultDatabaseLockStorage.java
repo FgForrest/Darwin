@@ -46,7 +46,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 	@Override
     protected LockState createDbLock(final String processName, final LocalDateTime until, final String unlockKey) {
 		final String insertScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_insert.sql");
-		jdbcTemplate.update(insertScript, processName, until, unlockKey);
+		jdbcTemplate.update(insertScript, processName, java.sql.Timestamp.valueOf(until), unlockKey);
 		return LockState.LEASED;
 	}
 
@@ -64,7 +64,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 	@Override
     protected LockState renewDbLease(final LocalDateTime until, final String processName, final String unlockKey) {
 		final String updateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_update.sql");
-		if (jdbcTemplate.update(updateScript, until, processName, unlockKey) > 0) {
+		if (jdbcTemplate.update(updateScript, java.sql.Timestamp.valueOf(until), processName, unlockKey) > 0) {
 			return LockState.LEASED;
 		} else {
 			return LockState.AVAILABLE;

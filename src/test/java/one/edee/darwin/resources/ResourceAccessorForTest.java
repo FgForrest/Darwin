@@ -2,6 +2,7 @@ package one.edee.darwin.resources;
 
 import one.edee.darwin.model.Platform;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.util.ArrayList;
@@ -16,6 +17,13 @@ import java.util.Collections;
  */
 public class ResourceAccessorForTest extends DefaultResourceAccessor {
 	private String resourcePathForPatch;
+
+    public ResourceAccessorForTest() {
+    }
+
+    public ResourceAccessorForTest(ResourceLoader resourceLoader, String encoding, String resourcePath) {
+        super(resourceLoader, encoding, resourcePath);
+    }
 
     public void setResourcePathForPatch(String resourcePathForPatch) {
         this.resourcePathForPatch = resourcePathForPatch;

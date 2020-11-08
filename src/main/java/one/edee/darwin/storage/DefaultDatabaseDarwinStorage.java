@@ -106,7 +106,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
             //if there already is some patch of this name for this component
             final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_patch.sql");
             sqlCommandWhichThrewException = sql;
-            jdbcTemplate.update(sql, componentName, patchName, 0, detectedOn, null, platform.name());
+            jdbcTemplate.update(sql, componentName, patchName, 0, java.sql.Timestamp.valueOf(detectedOn), null, platform.name());
 
             //insert was ok - we need to load patch from db
             return getPatchFromDb(patchName, componentName, platform);
@@ -143,7 +143,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
             final String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/update_markPatchAsFinished.sql");
             jdbcTemplate.update(
                     sql,
-                    LocalDateTime.now(),
+		            java.sql.Timestamp.valueOf(LocalDateTime.now()),
                     patch.getPatchName(), patch.getComponentName(), patch.getPlatform().name()
             );
         }
@@ -224,32 +224,26 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
     }
 
     private void insertSqlScriptToDB(Patch patch, String statement,
-                                     long processTime, Date finishedOn, Exception exception) {
+                                     long processTime, LocalDateTime finishedOn, Exception exception) {
         if (patch.isInDb()) {
-        	// skip - table has different structure
-	        if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
-		        return;
-	        }
             String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/insert_script.sql");
             jdbcTemplate.update(
                     sql, patch.getPatchId(), statement, computeHash(statement),
-                    processTime, finishedOn,
+                    processTime,
+		            java.sql.Timestamp.valueOf(finishedOn),
                     exception != null ? exceptionToString(exception) : null
             );
         }
     }
 
 	private void updateSqlScriptInDB(Patch patch, String statement,
-	                                 long processTime, Date finishedOn, Exception exception) {
+	                                 long processTime, LocalDateTime finishedOn, Exception exception) {
 		if (patch.isInDb()) {
-			// skip - table has different structure
-			if ("darwin".equals(patch.getComponentName()) && "patch_3.1.sql".equals(patch.getPatchName())) {
-				return;
-			}
 			String sql = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/update_script.sql");
 			jdbcTemplate.update(
 					sql,
-					processTime, finishedOn,
+					processTime,
+					java.sql.Timestamp.valueOf(finishedOn),
 					exception != null ? exceptionToString(exception) : null,
 					patch.getPatchId(), computeHash(statement)
 			);

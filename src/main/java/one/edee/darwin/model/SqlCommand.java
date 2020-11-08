@@ -3,7 +3,7 @@ package one.edee.darwin.model;
 import lombok.Data;
 import one.edee.darwin.exception.SqlCommandFormatException;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * This class represents single SQL statement that is part of the {@link Patch} and should be applied in order to evolve
@@ -16,7 +16,7 @@ public class SqlCommand {
     private final int patchId;
     private final String statement;
     private final long processTime;
-    private final Date finishedOn;
+    private final LocalDateTime finishedOn;
     private Exception exception;
 
     /**
@@ -27,7 +27,7 @@ public class SqlCommand {
      * @param processTime time in milliseconds of how long the application of the statement in DB took
      * @param finishedOn  date and time when the SQL statement was finished
      */
-    public SqlCommand(int patchId, String statement, long processTime, Date finishedOn) {
+    public SqlCommand(int patchId, String statement, long processTime, LocalDateTime finishedOn) {
         validateSqlCommand(patchId, statement, processTime);
         this.patchId = patchId;
         this.statement = statement;
@@ -46,7 +46,7 @@ public class SqlCommand {
      * @param exception   exception thrown during the statement application
      */
     public SqlCommand(int patchId, String statement, long processTime,
-                      Date finishedOn, Exception exception) {
+                      LocalDateTime finishedOn, Exception exception) {
         validateSqlCommand(patchId, statement, processTime);
         this.patchId = patchId;
         this.statement = statement;

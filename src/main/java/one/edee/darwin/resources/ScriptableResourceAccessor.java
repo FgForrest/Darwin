@@ -3,26 +3,32 @@ package one.edee.darwin.resources;
 import freemarker.template.Configuration;
 import freemarker.template.SimpleHash;
 import freemarker.template.Template;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.apachecommons.CommonsLog;
+import org.springframework.core.io.ResourceLoader;
 
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Map;
 
 /**
- * This resouce accessor extend default resource accessor with ability to proces Freemarker scripts inside SQL
+ * This resource accessor extend default resource accessor with ability to proces Freemarker scripts inside SQL
  * statements.
  *
  * @author Jan Novotný, FG Forrest a.s. (c) 2007
- * @version $Id$
  */
+@CommonsLog
 public class ScriptableResourceAccessor extends DefaultResourceAccessor {
-	private static final Log log = LogFactory.getLog(ScriptableResourceAccessor.class);
-	private static final Configuration cfg = new Configuration();
-	private final SimpleHash vars = new SimpleHash();
+	private static final Configuration CONFIGURATION = new Configuration(Configuration.VERSION_2_3_28);
+	private final SimpleHash vars = new SimpleHash(CONFIGURATION.getObjectWrapper());
 
-	public void setVars(Map vars) {
+	public ScriptableResourceAccessor() {
+	}
+
+	public ScriptableResourceAccessor(ResourceLoader resourceLoader, String encoding, String resourcePath) {
+		super(resourceLoader, encoding, resourcePath);
+	}
+
+	public void setVars(Map<String, Object> vars) {
 		this.vars.putAll(vars);
 	}
 
@@ -39,7 +45,7 @@ public class ScriptableResourceAccessor extends DefaultResourceAccessor {
 				Template template = new Template(
 						"darwinUpdateTempTemplate",
 						new StringReader(text),
-						cfg
+						CONFIGURATION
 				);
 				StringWriter writer = new StringWriter(text.length() * 2);
 				template.process(vars, writer);

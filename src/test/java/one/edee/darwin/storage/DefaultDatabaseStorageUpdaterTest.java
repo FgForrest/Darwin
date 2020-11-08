@@ -2,11 +2,16 @@ package one.edee.darwin.storage;
 
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.resources.DefaultResourceAccessor;
+import one.edee.darwin.storage.DefaultDatabaseStorageUpdaterTest.TestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,14 +25,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
+@ContextConfiguration(
+		classes = {
+				TestConfiguration.class
+		}
+)
 public class DefaultDatabaseStorageUpdaterTest extends AbstractDarwinTest {
 
 	@Autowired
 	private DefaultDatabaseStorageUpdater tested;
 
-	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
 	@Autowired
-	@Qualifier("dbAutoUpdateResourceAccessor4Test")
+	@Qualifier("darwinResourceAccessor4Test")
 	private DefaultResourceAccessor alternativeDbAutoUpdateResourceAccessor;
 
 	@Test
@@ -62,6 +71,16 @@ public class DefaultDatabaseStorageUpdaterTest extends AbstractDarwinTest {
 		} else {
 			assertTrue(processedContent.replace("\r\n","\n").contains("as\n"));
 		}
+	}
+
+	@Configuration
+	public static class TestConfiguration {
+
+		@Bean
+		public DefaultResourceAccessor darwinResourceAccessor4Test(ResourceLoader resourceLoader) {
+			return new DefaultResourceAccessor(resourceLoader, "UTF-8", "classpath:/META-INF/darwin/sql-test/upgrade/");
+		}
+
 	}
 
 }

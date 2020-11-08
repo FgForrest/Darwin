@@ -9,7 +9,7 @@ create table DARWIN_LOCK
 (
   processName VARCHAR2(255) not null,
   leaseUntil TIMESTAMP not null,
-  unlockKey varchar(255) not null,
+  unlockKey VARCHAR(255) not null,
   constraint CNUN_DARWIN_LOCK unique (processName)
 );
 

@@ -37,7 +37,7 @@ public class DarwinTestHelper {
 
 	public static void deleteAllInfrastructuralPages(Darwin darwin) {
 		DefaultDatabaseStorageUpdater updater = (DefaultDatabaseStorageUpdater) darwin.getStorageUpdater();
-		final JdbcTemplate jdbcTemplate = updater.getJdbcTemplate();
+		final JdbcTemplate jdbcTemplate = new JdbcTemplate(updater.getDataSource());
 		deleteAllInfrastructuralPages(jdbcTemplate);
 	}
 
@@ -47,8 +47,8 @@ public class DarwinTestHelper {
 		safelyExecute(jdbcTemplate, "DROP TABLE DARWIN_LOCK");
 		safelyExecute(jdbcTemplate, "DROP TABLE DARWIN");
 		if (ORACLE.equals(getPlatformFromJdbcUrl(Objects.requireNonNull(jdbcTemplate.getDataSource())))) {
-			safelyExecute(jdbcTemplate, "DROP SEQUENCE SQ_DARWIN_AUTOUPDATE_PATCH");
-			safelyExecute(jdbcTemplate, "DROP SEQUENCE SQ_DARWIN_AUTOUPDATE_SQL");
+			safelyExecute(jdbcTemplate, "DROP SEQUENCE SQ_DARWIN_PATCH");
+			safelyExecute(jdbcTemplate, "DROP SEQUENCE SQ_DARWIN_SQL");
 		}
 	}
 

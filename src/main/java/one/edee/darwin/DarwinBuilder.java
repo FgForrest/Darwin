@@ -79,7 +79,7 @@ public class DarwinBuilder {
 		darwin.setResourceMatcher(resourceMatcher);
 		darwin.setResourceNameAnalyzer(resourceNameAnalyzer);
 		darwin.setResourceAccessor(resourceAccessor);
-		darwin.setComponentDescriptor(componentDescriptor);
+		darwin.setModelVersion(componentDescriptor);
 		darwin.setDataSourceName(dataSourceName);
 		darwin.setTransactionManagerName(transactionManagerName);
 		darwin.setLocker(locker);

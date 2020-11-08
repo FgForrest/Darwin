@@ -7,11 +7,13 @@ package one.edee.darwin.locker;
 
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.exception.ProcessIsLockedException;
+import one.edee.darwin.spring.DarwinConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,6 +21,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ContextConfiguration(
+		classes = {
+				DarwinConfiguration.class
+		}
+)
 public abstract class LockerTest extends AbstractDarwinTest {
 	@Autowired private Locker locker;
 	private LocalDateTime now, nowPlusHour, nowMinusHour, nowPlusDay;

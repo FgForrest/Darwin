@@ -6,7 +6,9 @@ import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.LockState;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -27,7 +29,8 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
     @Override
     public LocalDateTime getCurrentDatabaseTime() {
         String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_current_time.sql");
-        return jdbcTemplate.queryForObject(dateScript, LocalDateTime.class);
+        final Instant databaseNow = jdbcTemplate.queryForObject(dateScript, Instant.class);
+        return LocalDateTime.ofInstant(databaseNow, ZoneId.systemDefault());
     }
 
     @Override

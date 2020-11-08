@@ -4,7 +4,6 @@ import one.edee.darwin.Darwin;
 import one.edee.darwin.DarwinBuilder;
 import one.edee.darwin.locker.Locker;
 import one.edee.darwin.locker.LockerBuilder;
-import one.edee.darwin.resources.DefaultResourceAccessor;
 import one.edee.darwin.resources.ResourceAccessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -21,28 +20,20 @@ public class DarwinConfiguration {
 	@Autowired private ApplicationContext applicationContext;
 
 	@Bean
-	public Darwin darwin() {
+	public Darwin darwin(ResourceAccessor resourceAccessor) {
 		return new DarwinBuilder(applicationContext, Darwin.DARWIN_COMPONENT_NAME, Darwin.DARWIN_COMPONENT_VERSION)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(darwinUpdateResourceAccessor())
-				.withLocker(locker())
+				.withResourceAccessor(resourceAccessor)
+				.withLocker(locker(resourceAccessor))
 				.build();
 	}
 
 	@Bean
-	public Locker locker() {
+	public Locker locker(ResourceAccessor resourceAccessor) {
 		return new LockerBuilder(applicationContext)
 				.withSkipIfDataSourceNotPresent(true)
-				.withResourceAccessor(darwinUpdateResourceAccessor())
+				.withResourceAccessor(resourceAccessor)
 				.build();
-	}
-
-	@Bean
-	public ResourceAccessor darwinUpdateResourceAccessor() {
-		return new DefaultResourceAccessor(
-				applicationContext, "UTF-8",
-				"classpath:META-INF/darwin/sql/"
-		);
 	}
 
 }

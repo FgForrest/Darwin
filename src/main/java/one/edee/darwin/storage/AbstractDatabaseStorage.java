@@ -24,30 +24,33 @@ import java.util.Objects;
 @CommonsLog
 public abstract class AbstractDatabaseStorage implements InitializingBean, ResourceLoaderAware {
     protected final DefaultResourceAccessor dbResourceAccessor = new DefaultResourceAccessor();
+    @Getter protected ResourceLoader resourceLoader;
     @Getter @Setter protected ResourceAccessor resourceAccessor;
     @Getter @Setter protected PlatformTransactionManager transactionManager;
-    @Getter @Setter protected JdbcTemplate jdbcTemplate;
+    @Getter protected DataSource dataSource;
+    protected JdbcTemplate jdbcTemplate;
     private Platform platform;
 
     @Override
     public void afterPropertiesSet() {
-        Assert.notNull(jdbcTemplate, "Darwin needs JdbcTemplate to be not null!");
-        Assert.notNull(resourceAccessor, "Darwin needs dbResourceAccessor to be not null!");
+        Assert.notNull(dataSource, "Darwin needs DataSource to be not null!");
+        Assert.notNull(resourceAccessor, "Darwin needs ResourceAccessor to be not null!");
     }
 
     public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 
-	@Override
-	public void setResourceLoader(ResourceLoader resourceLoader) {
-		this.dbResourceAccessor.setResourceLoader(resourceLoader);
-	}
+    public void setResourceLoader(ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+        this.dbResourceAccessor.setResourceLoader(resourceLoader);
+    }
 
-	public Platform getPlatform() {
+    public Platform getPlatform() {
         if (platform == null) {
             platform = Platform.getPlatformFromJdbcUrl(
-                    Objects.requireNonNull(jdbcTemplate.getDataSource())
+                    Objects.requireNonNull(dataSource)
             );
         }
         return platform;

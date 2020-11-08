@@ -2,15 +2,20 @@ package one.edee.darwin.resources;
 
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.model.Platform;
+import one.edee.darwin.resources.DefaultResourceAccessorTest.TestConfiguration;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -21,14 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
+@ContextConfiguration(
+		classes = {
+				TestConfiguration.class
+		}
+)
 public class DefaultResourceAccessorTest extends AbstractDarwinTest {
 
-	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
     @Qualifier("darwinResourceAccessor")
     private DefaultResourceAccessor darwinResourceAccessor;
 
-	@SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
     @Qualifier("darwinResourceAccessor4Test")
     private DefaultResourceAccessor alternativeDarwinResourceAccessor;
@@ -299,12 +307,12 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
     @DirtiesContext
     @Test
     public void testGetSortedResourceList() throws Exception {
-        darwinResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
+	    darwinResourceAccessor.setResourcePath("/META-INF/darwin/sortedResourceTest");
         Resource[] files = darwinResourceAccessor.getSortedResourceList(Platform.MYSQL);
         assertNotNull(files);
         assertTrue(files.length > 4);
         assertTrue(files[0].getFilename().endsWith("create.sql"), files[0].getFilename() + " doesn't end with create.sql");
-        assertTrue(files[files.length - 1].getFilename().endsWith("patch_3.0.sql"));
+        assertTrue(files[files.length - 1].getFilename().endsWith("lock_update.sql"));
     }
 
     @Test
@@ -315,4 +323,15 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest {
         assertEquals(1, result.size());
         assertTrue(result.get(0).startsWith("CREATE TABLE T_FORUM_TOPIC ("));
     }
+
+    @Configuration
+    public static class TestConfiguration {
+
+    	@Bean
+    	public DefaultResourceAccessor darwinResourceAccessor4Test(ResourceLoader resourceLoader) {
+		    return new DefaultResourceAccessor(resourceLoader, "UTF-8", "classpath:/META-INF/darwin/sql-test/upgrade/");
+	    }
+
+    }
+
 }
