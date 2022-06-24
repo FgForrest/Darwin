@@ -6,10 +6,14 @@ import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.LockState;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * Transaction database implementation.
@@ -28,9 +32,21 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
 
     @Override
     public LocalDateTime getCurrentDatabaseTime() {
-        String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_current_time.sql");
-        final Instant databaseNow = jdbcTemplate.queryForObject(dateScript, Instant.class);
-        return LocalDateTime.ofInstant(databaseNow, ZoneId.systemDefault());
+        final String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_current_time.sql");
+        final Object databaseNow = jdbcTemplate.queryForObject(dateScript, Object.class);
+        if (databaseNow instanceof Instant) {
+            return LocalDateTime.ofInstant((Instant)databaseNow, ZoneId.systemDefault());
+        } else if (databaseNow instanceof LocalDateTime) {
+            return (LocalDateTime) databaseNow;
+        } else if (databaseNow instanceof Timestamp) {
+            return ((Timestamp)databaseNow).toLocalDateTime();
+        } else if (databaseNow instanceof OffsetDateTime) {
+            return ((OffsetDateTime)databaseNow).toLocalDateTime();
+        } else {
+            throw new IllegalStateException(
+                "Unknown type returned by database: " + ofNullable(databaseNow).map(Object::getClass).orElse(null)
+            );
+        }
     }
 
     @Override

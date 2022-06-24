@@ -1,4 +1,4 @@
 update DARWIN set
- modified = SYSDATE,
+ modified = CURRENT_TIMESTAMP(),
  version = ?
 where component = ?;

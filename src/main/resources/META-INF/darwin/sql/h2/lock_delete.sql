@@ -1,1 +1,1 @@
-delete from DARWIN_LOCK where processName = ? and (leaseUntil <= SYSDATE or unlockKey = ?);
+delete from DARWIN_LOCK where processName = ? and (leaseUntil <= CURRENT_TIMESTAMP() or unlockKey = ?);

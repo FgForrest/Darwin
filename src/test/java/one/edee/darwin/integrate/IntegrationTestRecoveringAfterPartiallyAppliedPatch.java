@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -96,7 +97,7 @@ public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extend
 			resourceAccessor4Test.setResourcePathForPatch("/META-INF/darwin/sql-test/" + platform.getFolderName() + "EstablishmentAfterFailSql/withWrongSql/");
 			darwin.evolve();
 			fail("Exception expected here.");
-		} catch (BadSqlGrammarException ignored) {
+		} catch (UncategorizedSQLException |  BadSqlGrammarException ignored) {
 			//exception is anticipated
 		}
     }
