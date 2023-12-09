@@ -285,7 +285,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(String processName, LocalDateTime until, LockRestorer lockerRestorer) throws ProcessIsLockedException {
         final String unlockKey = leaseProcess(processName, until);
-        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), unlockKey);
+        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), enhanceUnlockKey(unlockKey));
         return cleanUnlockKey(unlockKey);
     }
 
@@ -299,7 +299,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(String processName, LocalDateTime until, int waitForLockInMilliseconds, LockRestorer lockerRestorer) throws ProcessIsLockedException {
         final String unlockKey = leaseProcess(processName, until, waitForLockInMilliseconds);
-        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), unlockKey);
+        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), enhanceUnlockKey(unlockKey));
         return cleanUnlockKey(unlockKey);
     }
 
@@ -401,8 +401,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     }
 
     private String enhanceUnlockKey(String unlockKey){
-        if (unlockKey == null)
-            return null;
+        if (unlockKey == null || unlockKey.endsWith(getInstanceId()))
+            return unlockKey;
 
         return unlockKey + getInstanceId();
     }
