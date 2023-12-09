@@ -1,8 +1,10 @@
 package one.edee.darwin.locker;
 
 /**
- * The HostProvider interface represents a provider that can provide information about hosts.
- * Implementations of this interface can provide different ways to retrieve host information.
+ * An interface for providing instance IDs. Implementations must provide the getInstanceId() method,
+ * which returns the unique identifier for the current instance and node.
+ *
+ * @author Štěpán Kameník, FG Forrest a.s. (c) 2023
  */
 public interface InstanceIdProvider {
     String DEFAULT_INSTANCE_ID = "DEFAULT";
