@@ -27,6 +27,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 		LOCK_CHECK("lock_check.sql"),
 		LOCK_CURRENT_TIME("lock_current_time.sql"),
 		LOCK_DELETE("lock_delete.sql"),
+		LOCK_INSTANCE_DELETE("lock_instance_delete.sql"),
 		LOCK_INSERT("lock_insert.sql"),
 		LOCK_UPDATE("lock_update.sql");
 
@@ -37,6 +38,19 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 	private static class LockStorageStatementWithPlatform {
 		private final LockStorageStatement statementType;
 		private final Platform platform;
+	}
+
+	@Override
+	protected int releaseDbLocksForInstance(final String instanceId) {
+		final String instanceDeleteScript = STATEMENTS_CACHE.computeIfAbsent(
+				getKey(LockStorageStatement.LOCK_INSTANCE_DELETE), this::readContentFromResource
+		);
+		try {
+			return jdbcTemplate.queryForObject(instanceDeleteScript, Integer.class, instanceId);
+		} catch (EmptyResultDataAccessException ignored) {
+			//no lock found
+			return 0;
+		}
 	}
 
 	@Override
@@ -113,5 +127,6 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 						statementTypeWithPlatform.getStatementType().getFileName()
 		);
 	}
+
 
 }

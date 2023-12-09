@@ -4,6 +4,7 @@ classpath:META-INF/darwin/sql/oracle/update.sql
 classpath:META-INF/darwin/sql/oracle/version.sql
 classpath:META-INF/darwin/sql/oracle/lock_check.sql
 classpath:META-INF/darwin/sql/oracle/lock_delete.sql
+classpath:META-INF/darwin/sql/oracle/lock_instance_delete.sql
 classpath:META-INF/darwin/sql/oracle/lock_insert.sql
 classpath:META-INF/darwin/sql/oracle/lock_update.sql
 classpath:META-INF/darwin/sql/oracle/lock_current_time.sql

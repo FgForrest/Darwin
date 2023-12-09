@@ -22,11 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles(value = "MYSQL")
 @Profile(value = "MYSQL")
 public class ScriptableResourceAccessorTest extends AbstractDarwinTest {
-	@Autowired private ScriptableResourceAccessor scriptableDbAutoUpdateResourceAccessor;
+	@Autowired private ScriptableResourceAccessor scriptableDbDarwinResourceAccessor;
 
 	@Test
 	public void testGetTextContentFromResource() {
-		String content = scriptableDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/scriptedCreate.sql");
+		String content = scriptableDbDarwinResourceAccessor.getTextContentFromResource("mysql/scriptedCreate.sql");
 		assertNotNull(content);
 		assertTrue(content.startsWith("create table MYPREF_DARWIN"));
 	}
@@ -35,7 +35,7 @@ public class ScriptableResourceAccessorTest extends AbstractDarwinTest {
 	public static class TestConfiguration {
 
 		@Bean
-		public ScriptableResourceAccessor scriptableDbAutoUpdateResourceAccessor(ResourceLoader resourceLoader) {
+		public ScriptableResourceAccessor scriptableDbDarwinResourceAccessor(ResourceLoader resourceLoader) {
 			final ScriptableResourceAccessor scriptableResourceAccessor = new ScriptableResourceAccessor(resourceLoader, "UTF-8", "classpath:/META-INF/darwin/sql-test/upgrade/");
 			scriptableResourceAccessor.setVars(
 					Collections.singletonMap("tablePrefix", "MYPREF_")

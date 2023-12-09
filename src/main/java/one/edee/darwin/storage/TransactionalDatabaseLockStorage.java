@@ -59,6 +59,15 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
     }
 
     @Override
+    public int releaseProcessesForInstance(String instanceId) {
+        if (transactionTemplate != null) {
+            return transactionTemplate.execute(status -> releaseDbLocksForInstance(instanceId));
+        } else {
+            return releaseDbLocksForInstance(instanceId);
+        }
+    }
+
+    @Override
     public LockState createLock(final String processName, final LocalDateTime until, final String unlockKey) {
         if (log.isDebugEnabled()) {
             log.debug("Creating lock for: " + processName + " with unlock key " + unlockKey);
@@ -94,6 +103,8 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
             return renewDbLease(until, processName, unlockKey);
         }
     }
+
+    protected abstract int releaseDbLocksForInstance(String instanceId);
 
     protected abstract LockState getDbProcessLock(final String processName, final LocalDateTime currentDate);
 

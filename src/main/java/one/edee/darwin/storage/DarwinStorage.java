@@ -109,7 +109,7 @@ public interface DarwinStorage {
 
     /**
      * Returns true if there is any patch recorded for this component.
-     * Determines whether the component was updated by the new generation of autoupdater.
+     * Determines whether the component was updated by the new generation of darwin.
      *
      * @param componentName name of component what we want check
      */
