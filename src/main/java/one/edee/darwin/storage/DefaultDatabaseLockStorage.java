@@ -46,7 +46,7 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 				getKey(LockStorageStatement.LOCK_INSTANCE_DELETE), this::readContentFromResource
 		);
 		try {
-			return jdbcTemplate.queryForObject(instanceDeleteScript, Integer.class, instanceId);
+			return jdbcTemplate.update(instanceDeleteScript, "%"+instanceId);
 		} catch (EmptyResultDataAccessException ignored) {
 			//no lock found
 			return 0;

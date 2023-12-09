@@ -1,1 +1,1 @@
-delete from DARWIN_LOCK where unlockKey like '%?';
+delete from DARWIN_LOCK where unlockKey like ?;

@@ -8,6 +8,7 @@ package one.edee.darwin.locker;
 import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.exception.ProcessIsLockedException;
 import one.edee.darwin.spring.DarwinConfiguration;
+import one.edee.darwin.utils.spring.InstanceIdConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,11 +24,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ContextConfiguration(
 		classes = {
-				DarwinConfiguration.class
+				DarwinConfiguration.class,
+				InstanceIdConfiguration.class
 		}
 )
 public abstract class LockerTest extends AbstractDarwinTest {
 	@Autowired private Locker locker;
+	@Autowired private InstanceIdProvider instanceIdProvider;
 	private LocalDateTime now, nowPlusHour, nowMinusHour, nowPlusDay;
 
 	@BeforeEach
@@ -63,6 +66,25 @@ public abstract class LockerTest extends AbstractDarwinTest {
 		locker.releaseProcess(processName, unlockKey);
 //		assertTrue(locker.getExistingLocks().isEmpty());
 		assertTrue(locker.canLease(processName));
+	}
+
+	@Test
+	public void testLockRelease() throws Exception {
+		InstanceIdConfiguration.TestInstanceIdProvider testInstanceIdProvider = (InstanceIdConfiguration.TestInstanceIdProvider) instanceIdProvider;
+
+		locker.leaseProcess("process1", nowPlusHour);
+		locker.leaseProcess("process2", nowPlusHour);
+		locker.leaseProcess("process3", nowPlusHour);
+		final String oldId = testInstanceIdProvider.getInstanceId();
+		testInstanceIdProvider.setNodeId("newId");
+		locker.leaseProcess("processNew2", nowPlusHour);
+		locker.leaseProcess("processNew3", nowPlusHour);
+		assertEquals(2, locker.releaseProcessesForInstance());
+		assertEquals(0, locker.releaseProcessesForInstance());
+
+		testInstanceIdProvider.setNodeId(oldId);
+		assertEquals(3, locker.releaseProcessesForInstance());
+		assertEquals(0, locker.releaseProcessesForInstance());
 	}
 
 	@Test
