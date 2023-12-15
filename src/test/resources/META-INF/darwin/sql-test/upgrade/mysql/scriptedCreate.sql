@@ -4,6 +4,6 @@ create table ${tablePrefix}DARWIN
 	component varchar(255) not null,
 	modified datetime not null,
 	version varchar(20) null,
-	constraint CNPK_DB_AUTOUPDATE primary key (id),
-	index IX_DB_AUTOUPDATE_COMPONENT (component)
+	constraint CNPK_DB_DARWIN primary key (id),
+	index IX_DB_DARWIN_COMPONENT (component)
 ) engine=InnoDB;

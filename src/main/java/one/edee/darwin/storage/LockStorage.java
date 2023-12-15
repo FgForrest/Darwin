@@ -17,6 +17,11 @@ public interface LockStorage {
 	LocalDateTime getCurrentDatabaseTime();
 
 	/**
+	 * Method returns all existing process locks for specific instance.
+	 */
+	int releaseProcessesForInstance(String instanceId);
+
+	/**
 	 * Method returns data about existing / nonexistent lock.
 	 */
 	LockState getProcessLock(String processName, LocalDateTime currentDate);

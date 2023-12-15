@@ -12,7 +12,7 @@ import one.edee.darwin.resources.ResourceNameAnalyzer;
 import org.springframework.context.ApplicationContext;
 
 /**
- * Builder factory for AutoUpdate
+ * Builder factory for Darwin
  *
  * @author Jan Novotný (novotny@fg.cz), FG Forrest a.s. (c) 2016
  */

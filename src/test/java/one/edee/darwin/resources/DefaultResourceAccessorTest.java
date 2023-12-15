@@ -249,8 +249,8 @@ public class DefaultResourceAccessorTest extends AbstractDarwinTest implements I
                 "\tcomponent varchar(255) not null,\n" +
                 "\tmodified datetime not null,\n" +
                 "\tversion varchar(20) not null,\n" +
-                "\tconstraint CNPK_DB_AUTOUPDATE primary key (id),\n" +
-                "\tindex IX_DB_AUTOUPDATE_COMPONENT (component)\n" +
+                "\tconstraint CNPK_DB_DARWIN primary key (id),\n" +
+                "\tindex IX_DB_DARWIN_COMPONENT (component)\n" +
                 ") engine=InnoDB;" +
                 "\n\n" +
                 "update DARWIN set component = 'XX;;X;XX';\n" +

@@ -37,11 +37,11 @@ public class DefaultDatabaseStorageUpdaterTest extends AbstractDarwinTest {
 
 	@Autowired
 	@Qualifier("darwinResourceAccessor4Test")
-	private DefaultResourceAccessor alternativeDbAutoUpdateResourceAccessor;
+	private DefaultResourceAccessor alternativeDbDarwinResourceAccessor;
 
 	@Test
 	public void shouldRemoveComments() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented.sql");
+		String content = alternativeDbDarwinResourceAccessor.getTextContentFromResource("mysql/commented.sql");
 		assertNotNull(content);
 		String processedContent = tested.removeCommentsFromContent(content);
 		assertTrue(processedContent.contains("select ME from T_DB_DRUNKPEOPLE;"));
@@ -55,7 +55,7 @@ public class DefaultDatabaseStorageUpdaterTest extends AbstractDarwinTest {
 
 	@Test
 	public void shouldRemoveCommentsHashContent() {
-		String content = alternativeDbAutoUpdateResourceAccessor.getTextContentFromResource("mysql/commented2.sql");
+		String content = alternativeDbDarwinResourceAccessor.getTextContentFromResource("mysql/commented2.sql");
 		assertNotNull(content);
 		String processedContent = tested.removeCommentsFromContent(content);
 		assertFalse(processedContent.contains("# firstComment"));

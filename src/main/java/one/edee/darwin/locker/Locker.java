@@ -26,11 +26,13 @@ import javax.sql.DataSource;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * # Process synchronization in a cluster using shared RDBMS
@@ -132,6 +134,10 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     @Setter private String preferredScheduledExecutorService;
     /**
+     * Name of the preferred {@link InstanceIdProvider} if there are multiple ones in the context
+     */
+    @Setter private String preferredInstanceIdProvider;
+    /**
      * Default count of retry attempts when lease / renew lease or release lock fails.
      */
     @Setter private int retryTimes = 20;
@@ -145,6 +151,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     @Setter private ResourceAccessor resourceAccessor;
     @Getter private final Map<String, LockRestorer> processMap = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduledExecutorService;
+    private InstanceIdProvider instanceIdProvider;
 
     /**
      * Internal flag, if set to TRUE, locker will throw exceptions on every call.
@@ -248,17 +255,18 @@ public class Locker implements InitializingBean, ApplicationContextAware {
 
         try {
             until = normalizeDate(until);
-            final String unlockKey = Long.toHexString(System.currentTimeMillis());
+            final String unlockKey = enhanceUnlockKey(Long.toHexString(System.currentTimeMillis()));
             final LockState lockState = lockStorage.createLock(processName, until, unlockKey);
             Assert.isTrue(lockState == LockState.LEASED);
 
+            final String cleanedUnlockKey = cleanUnlockKey(unlockKey);
             if (log.isDebugEnabled()) {
                 SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-                log.debug("Process " + processName + " locked with unlockKey " + unlockKey +
-                        " until " + fmt.format(until) + "");
+                log.debug("Process " + processName + " locked with unlockKey " + cleanedUnlockKey +
+                        " until " + fmt.format(until));
             }
 
-            return unlockKey;
+            return cleanedUnlockKey;
         } catch (DataIntegrityViolationException ex) {
             //create lock could happen simultaneously - in that case throw ProcessIsLockedException
             final String msg = "Process " + processName + " has a foreign valid lock. Cannot register new one!";
@@ -277,8 +285,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(String processName, LocalDateTime until, LockRestorer lockerRestorer) throws ProcessIsLockedException {
         final String unlockKey = leaseProcess(processName, until);
-        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), unlockKey);
-        return unlockKey;
+        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), enhanceUnlockKey(unlockKey));
+        return cleanUnlockKey(unlockKey);
     }
 
     /**
@@ -291,8 +299,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(String processName, LocalDateTime until, int waitForLockInMilliseconds, LockRestorer lockerRestorer) throws ProcessIsLockedException {
         final String unlockKey = leaseProcess(processName, until, waitForLockInMilliseconds);
-        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), unlockKey);
-        return unlockKey;
+        setupCheckLockTimerTask(processName, until, lockerRestorer, LocalDateTime.now(), enhanceUnlockKey(unlockKey));
+        return cleanUnlockKey(unlockKey);
     }
 
     /**
@@ -304,10 +312,11 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * @throws ProcessIsLockedException when lock is already leased
      */
     public void renewLease(final String processName, final String unlockKey, final LocalDateTime until) throws ProcessIsLockedException {
+        final String enhancedUnlockKey = enhanceUnlockKey(unlockKey);
         checkStatus();
         doWithRetry((Supplier<Void>) () -> {
             final LocalDateTime normalizedUntil = normalizeDate(until);
-            final LockState result = lockStorage.renewLease(processName, unlockKey, normalizedUntil);
+            final LockState result = lockStorage.renewLease(processName, enhancedUnlockKey, normalizedUntil);
 
             if (result == LockState.AVAILABLE) {
                 final String msg = "Failed renew lock, process is locked with different unlock key, or lock does not exist!";
@@ -318,6 +327,17 @@ public class Locker implements InitializingBean, ApplicationContextAware {
         }, defaultRetryWaitTime, retryTimes);
     }
 
+    public int releaseProcessesForInstance() {
+        List<String> processesToRemove = processMap
+                .keySet()
+                .stream()
+                .filter(i -> i.endsWith(getInstanceId()))
+                .collect(Collectors.toList());
+        processesToRemove.forEach(processMap::remove);
+
+        return lockStorage.releaseProcessesForInstance(getInstanceId());
+    }
+
     /**
      * Release lock you are owner of. Ownership is based on unlock key.
      *
@@ -326,6 +346,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * @throws ProcessIsLockedException when the lock key doesn't match the current lock for the process
      */
     public void releaseProcess(final String processName, final String unlockKey) throws ProcessIsLockedException {
+        final String enhancedUnlockKey = enhanceUnlockKey(unlockKey);
+
         checkStatus();
         doWithRetry((Supplier<Void>) () -> {
             if (processName == null) {
@@ -334,13 +356,13 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 log.error(msg);
                 throw new IllegalArgumentException(msg);
             }
-            if (unlockKey == null) {
+            if (enhancedUnlockKey == null) {
                 String msg = "Cannot release process without an unlockKey (method was called with null unlockKey).";
                 log.error(msg);
                 throw new IllegalArgumentException(msg);
             }
-            processMap.remove(processName + unlockKey);
-            final LockState lockState = lockStorage.releaseProcess(processName, unlockKey);
+            processMap.remove(processName + enhancedUnlockKey);
+            final LockState lockState = lockStorage.releaseProcess(processName, enhancedUnlockKey);
             Assert.isTrue(lockState == LockState.AVAILABLE);
             return null;
         }, defaultRetryWaitTime, retryTimes);
@@ -358,7 +380,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             final CheckLockTimerTask timerTask = new CheckLockTimerTask(this, processName, unlockKey, renewTime);
             if (scheduledExecutorService == null) {
                 final Map<String, ScheduledExecutorService> scheduledExecutors = applicationContext.getBeansOfType(ScheduledExecutorService.class);
-                if (scheduledExecutors.size() > 0) {
+                if (!scheduledExecutors.isEmpty()) {
                     if (scheduledExecutors.size() == 1) {
                         scheduledExecutorService = scheduledExecutors.values().iterator().next();
                     } else {
@@ -369,6 +391,40 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             }
             scheduledExecutorService.scheduleAtFixedRate(timerTask, delayTime, renewTime, TimeUnit.MILLISECONDS);
         }
+    }
+
+    private String cleanUnlockKey(String unlockKey){
+        if (unlockKey == null)
+            return null;
+
+        return unlockKey.replace(getInstanceId(), "");
+    }
+
+    private String enhanceUnlockKey(String unlockKey){
+        if (unlockKey == null || unlockKey.endsWith(getInstanceId()))
+            return unlockKey;
+
+        return unlockKey + getInstanceId();
+    }
+    private String getInstanceId(){
+        return InstanceIdProvider.INSTANCE_DELIMITER + getInstanceIdProvider().getInstanceId();
+    }
+
+    private InstanceIdProvider getInstanceIdProvider(){
+
+        if (instanceIdProvider == null) {
+            final Map<String, InstanceIdProvider> instanceIdProviders = applicationContext.getBeansOfType(InstanceIdProvider.class);
+            if (!instanceIdProviders.isEmpty()) {
+                if (instanceIdProviders.size() == 1) {
+                    instanceIdProvider = instanceIdProviders.values().iterator().next();
+                } else {
+                    instanceIdProvider = instanceIdProviders.get(preferredInstanceIdProvider);
+                }
+            }
+            if (instanceIdProvider == null)
+                instanceIdProvider = () -> InstanceIdProvider.DEFAULT_INSTANCE_ID;
+        }
+        return instanceIdProvider;
     }
 
     /**

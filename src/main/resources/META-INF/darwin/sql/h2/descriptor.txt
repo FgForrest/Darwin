@@ -4,6 +4,7 @@ classpath:META-INF/darwin/sql/h2/update.sql
 classpath:META-INF/darwin/sql/h2/version.sql
 classpath:META-INF/darwin/sql/h2/lock_check.sql
 classpath:META-INF/darwin/sql/h2/lock_delete.sql
+classpath:META-INF/darwin/sql/h2/lock_instance_delete.sql
 classpath:META-INF/darwin/sql/h2/lock_insert.sql
 classpath:META-INF/darwin/sql/h2/lock_update.sql
 classpath:META-INF/darwin/sql/h2/lock_current_time.sql
