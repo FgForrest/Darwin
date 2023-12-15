@@ -228,20 +228,18 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven.compiler.version}</version>
+				<version>3.10.1</version>
 				<configuration>
 					<verbose>true</verbose>
 					<fork>true</fork>
 					<jdkToolchain>
 						<version>${java.compileVersion}</version>
 					</jdkToolchain>
-					<release>${java.compileVersion}</release>
 					<source>${java.compileVersion}</source>
 					<target>${java.compileVersion}</target>
 					<compilerVersion>${java.compileVersion}</compilerVersion>
 					<compilerArgs>
 						<arg>-parameters</arg>
-						<arg>--add-exports</arg>
 					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
@@ -256,25 +254,13 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.0.0-M7</version>
-				<dependencies>
-					<dependency>
-						<groupId>org.junit.platform</groupId>
-						<artifactId>junit-platform-surefire-provider</artifactId>
-						<version>${jupiter-surefire.version}</version>
-					</dependency>
-					<dependency>
-						<groupId>org.junit.jupiter</groupId>
-						<artifactId>junit-jupiter-engine</artifactId>
-						<version>${junit-platform.version}</version>
-					</dependency>
-				</dependencies>
 				<configuration>
 					<forkCount>1</forkCount>
 					<reuseForks>true</reuseForks>
 					<jdkToolchain>
 						<version>${java.compileVersion}</version>
 					</jdkToolchain>
-					<argLine>${surefireArgLine} -Xmx4g -Duser.country=US, -Duser.language=us -Dfile.encoding=${project.build.sourceEncoding} --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.math=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
+					<argLine>-Xmx4g -Duser.country=US, -Duser.language=us</argLine>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -285,6 +271,14 @@
 					<doclint>none</doclint>
 					<failOnError>false</failOnError>
 				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>
