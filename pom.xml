@@ -3,7 +3,7 @@
 	<groupId>one.edee.oss</groupId>
 	<artifactId>darwin</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0.5-SNAPSHOT</version>
+	<version>1.0.4-SNAPSHOT</version>
 	<name>Database Schema Evolution mechanism in a tiny library</name>
 	<url>https://github.com/FgForrest/Darwin/</url>
 	<description>
