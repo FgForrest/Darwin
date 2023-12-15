@@ -58,13 +58,10 @@ public abstract class LockerTest extends AbstractDarwinTest {
 	@Test
 	public void testLockCheck() throws Exception {
 		String processName = "processTest3";
-//		assertTrue(locker.releaseProcessesForInstance());
 		assertTrue(locker.canLease(processName));
 		String unlockKey = locker.leaseProcess(processName, nowPlusHour);
-//		assertFalse(locker.getExistingLocks().isEmpty());
 		assertFalse(locker.canLease(processName));
 		locker.releaseProcess(processName, unlockKey);
-//		assertTrue(locker.getExistingLocks().isEmpty());
 		assertTrue(locker.canLease(processName));
 	}
 
