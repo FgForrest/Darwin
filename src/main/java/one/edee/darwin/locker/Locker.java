@@ -36,74 +36,74 @@ import java.util.stream.Collectors;
 
 /**
  * # Process synchronization in a cluster using shared RDBMS
- *
+ * <p>
  * The Locker class has been created for the needs of Darwin, but you can use it in your application as well. Locker will
  * ensure that your processes that are not written for concurrent execution are executed one at a time eve in cluster
  * environment with multiple JVMs. The single prerequisite is a shared relational database that is accessible from all the
  * nodes.
- *
+ * <p>
  * Locker provides the following main methods:
- *
+ * <p>
  * - `String leaseProcess (String processName, Date until) throws ProcessIsLockedException`
  * - `void renewLease (String processName, String unlockKey, Date until) throws ProcessIsLockedException`
  * - `void releaseProcess (String processName, String unlockKey)`
- *
+ * <p>
  * The first method will get the lock for your process, the second method will release the lock. Locker will not allow
  * acquiring two locks to the process with the same name. However, the whole principle is based on the form of leasing -
  * the lock is only borrowed for the specified period (`until` argument). This leasing mechanism addresses the problem
  * of unexpected application termination when the locks are not released at all. In such situation processes can recover
  * automatically after the application restart one the lock lease period expires.
- *
+ * <p>
  * It's recommended to specify the `until` argument to a moment that to process is certainly finished. The better yet
  * to add a considerable reserve time so that the process won't exceed leased time. When process contains an inner loop for
  * paged records processing, it's recommended to prolong lease by calling `renewLease` method after each page has been
  * processed.
- *
+ * <p>
  * At the end the process is expected to return acquired lock by passing random key acquired during lease process. For
  * returning the key use `releaseProcess` method.
- *
+ * <p>
  * ## Recommended usage
- *
+ * <p>
  * See following example for recommended usage:
- *
+ * <p>
  * ``` java
  * String theKey = null;
  * try {
- *     theKey = locker.leaseProcess("myProcess", LocalDateTime.now().plusMinutes(30));
- *     // do your stuff
- *     while (pageOfRecords.hasNextPage()) {
- *         // process page
- *         locker.renewLease("myProcess", theKey, LocalDateTime.now().plusMinutes(30));
- *     }
+ * theKey = locker.leaseProcess("myProcess", LocalDateTime.now().plusMinutes(30));
+ * // do your stuff
+ * while (pageOfRecords.hasNextPage()) {
+ * // process page
+ * locker.renewLease("myProcess", theKey, LocalDateTime.now().plusMinutes(30));
+ * }
  * } catch (ProcessIsLockedException ex) {
- *     // process is running somewhere else - just log it
- *     logger.info("Process myProcess is running elsewhere, skipping this execution and will try next time.");
+ * // process is running somewhere else - just log it
+ * logger.info("Process myProcess is running elsewhere, skipping this execution and will try next time.");
  * } finally {
- *     Optional.ofNullable(theKey)
- *             .ifPresent(it -> locker.releaseProcess("myProcess", it));
+ * Optional.ofNullable(theKey)
+ * .ifPresent(it -> locker.releaseProcess("myProcess", it));
  * }
  * ```
- *
+ * <p>
  * ## Automatic lock extension
- *
+ * <p>
  * If you cannot estimate the proper lease time you can take advantage of automatic asynchronous lock prolonging process.
  * There are two special forms of lease methods that accept `LockRestorer` implementation:
- *
+ * <p>
  * - `String leaseProcess(String processName, Date until, LockRestorer lockerRestorer)`
  * - `String leaseProcess(String processName, Date until, int waitForLockInMilliseconds, LockRestorer lockRestorer)`
- *
+ * <p>
  * The last parameter represents your logic implementing the LockRestorer interface that returns flag signalizing whether
  * your process already finished or not.
- *
+ * <p>
  * By calling these lease methods a new instance of CheckLockTimerTask is created and scheduled and periodically calls your
  * LockRestorer implementation to determine whether lock needs to be prolonged.
- *
+ * <p>
  * Lock is renewed as long as:
- *
+ * <p>
  * - the maximum number of lock extensions has been reached (the maximum number is defined by the constant MAX_RENEW_COUNT = 10)
  * - the lock has already been unlocked using the releaseProcess method
  * - the process signalizes TRUE in method lockRestorer.isFinished()
- *
+ * <p>
  * CheckLockerTimerTask is triggered after 70% of the lock validity (eg if the lock validity is set to 10min, the
  * lock is extended after 7 minutes). There is no hard guarantee the CheckLockerTimerTask will be invoked by the system.
  * It uses standard `java.util.concurrent.ScheduledExecutorService.scheduleAtFixedRate` which may not invoke tasks when
@@ -114,42 +114,51 @@ import java.util.stream.Collectors;
 @CommonsLog
 public class Locker implements InitializingBean, ApplicationContextAware {
     private static final float CHECK_RENEW_RATIO = 0.7f;
-
+    @Getter
+    private final Map<String, LockRestorer> processMap = new ConcurrentHashMap<>();
     /**
-	 * If set to true Locker with silently disable itself in case datasource is not present in application context.
-	 */
-    @Setter private boolean skipIfDataSourceNotPresent = true;
+     * If set to true Locker with silently disable itself in case datasource is not present in application context.
+     */
+    @Setter
+    private boolean skipIfDataSourceNotPresent = true;
     /**
      * Name of the {@link DataSource} bean that will be looked up in {@link #applicationContext} in case no data source
      * is supplied from outside.
      */
-    @Setter private String dataSourceName = "dataSource";
+    @Setter
+    private String dataSourceName = "dataSource";
     /**
      * Name of the {@link PlatformTransactionManager} bean that will be looked up in {@link #applicationContext} in case
      * no transaction manager is supplied from outside.
      */
-    @Setter private String transactionManagerName = "transactionManager";
+    @Setter
+    private String transactionManagerName = "transactionManager";
     /**
      * Name of the preferred {@link ScheduledExecutorService} if there are multiple ones in the context
      */
-    @Setter private String preferredScheduledExecutorService;
+    @Setter
+    private String preferredScheduledExecutorService;
     /**
      * Name of the preferred {@link InstanceIdProvider} if there are multiple ones in the context
      */
-    @Setter private String preferredInstanceIdProvider;
+    @Setter
+    private String preferredInstanceIdProvider;
     /**
      * Default count of retry attempts when lease / renew lease or release lock fails.
      */
-    @Setter private int retryTimes = 20;
+    @Setter
+    private int retryTimes = 20;
     /**
      * Default time to wait between repeated attempts to renew lease or release lock fails.
      */
-    @Setter private long defaultRetryWaitTime = 3000L;
-
-    @Setter private ApplicationContext applicationContext;
-    @Setter private LockStorage lockStorage;
-    @Setter private ResourceAccessor resourceAccessor;
-    @Getter private final Map<String, LockRestorer> processMap = new ConcurrentHashMap<>();
+    @Setter
+    private long defaultRetryWaitTime = 3000L;
+    @Setter
+    private ApplicationContext applicationContext;
+    @Setter
+    private LockStorage lockStorage;
+    @Setter
+    private ResourceAccessor resourceAccessor;
     private ScheduledExecutorService scheduledExecutorService;
     private InstanceIdProvider instanceIdProvider;
 
@@ -162,10 +171,10 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     /**
      * Creates lock persister on specific dataSource and transactionManager.
      *
-     * @param ds data source
+     * @param ds                 data source
      * @param transactionManager transaction manager
-     * @param resourceAccessor implementation for accessing SQL queries
-     * @param resourceLoader implementation for loading Spring {@link org.springframework.core.io.Resource}
+     * @param resourceAccessor   implementation for accessing SQL queries
+     * @param resourceLoader     implementation for loading Spring {@link org.springframework.core.io.Resource}
      * @return default {@link LockStorage} implementation
      */
     public static LockStorage createDefaultLockStorage(
@@ -175,7 +184,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
         lockPersister.setResourceAccessor(resourceAccessor);
         lockPersister.setDataSource(ds);
         lockPersister.setTransactionManager(transactionManager);
-		lockPersister.setResourceLoader(resourceLoader);
+        lockPersister.setResourceLoader(resourceLoader);
 
         final TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
@@ -245,7 +254,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * Method stores lock on particular process.
      *
      * @param processName name of the process we want to lock
-     * @param until date until lock should be kept providing no one has unlock it by then
+     * @param until       date until lock should be kept providing no one has unlock it by then
      * @return key for unlocking stored lock
      */
     public String leaseProcess(String processName, LocalDateTime until) throws ProcessIsLockedException {
@@ -257,7 +266,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             until = normalizeDate(until);
             final String unlockKey = enhanceUnlockKey(Long.toHexString(System.currentTimeMillis()));
             final LockState lockState = lockStorage.createLock(processName, until, unlockKey);
-            Assert.isTrue(lockState == LockState.LEASED);
+            Assert.isTrue(lockState == LockState.LEASED, "Lock was not created!");
 
             final String cleanedUnlockKey = cleanUnlockKey(unlockKey);
             if (log.isDebugEnabled()) {
@@ -280,7 +289,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * Method stores lock on particular process and start lock restorer.
      *
      * @param processName name of the process we want to lock
-     * @param until date until lock should be kept providing no one has unlock it by then
+     * @param until       date until lock should be kept providing no one has unlock it by then
      * @throws ProcessIsLockedException when lock is already leased
      */
     public String leaseProcess(String processName, LocalDateTime until, LockRestorer lockerRestorer) throws ProcessIsLockedException {
@@ -293,7 +302,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * Method stores lock on particular process and start lock restorer.
      *
      * @param processName name of the process we want to lock
-     * @param until date until lock should be kept providing no one has unlock it by then
+     * @param until       date until lock should be kept providing no one has unlock it by then
      * @return key for unlocking stored lock
      * @throws ProcessIsLockedException when lock is already leased
      */
@@ -307,8 +316,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      * Renews lease date for particular process, if you have correct unlock key (otherwise exeption is thrown)
      *
      * @param processName name of the process we want to have the lock renewed
-     * @param unlockKey key obtained during lock leasing
-     * @param until date until lock should be kept providing no one has unlock it by then
+     * @param unlockKey   key obtained during lock leasing
+     * @param until       date until lock should be kept providing no one has unlock it by then
      * @throws ProcessIsLockedException when lock is already leased
      */
     public void renewLease(final String processName, final String unlockKey, final LocalDateTime until) throws ProcessIsLockedException {
@@ -327,22 +336,32 @@ public class Locker implements InitializingBean, ApplicationContextAware {
         }, defaultRetryWaitTime, retryTimes);
     }
 
+    /**
+     * Releases all processes associated with the current instance.
+     *
+     * @return The number of processes that were released.
+     */
     public int releaseProcessesForInstance() {
-        List<String> processesToRemove = processMap
+        final String instanceId = getInstanceId();
+        final List<String> processesToRemove = processMap
                 .keySet()
                 .stream()
-                .filter(i -> i.endsWith(getInstanceId()))
+                .filter(i -> i.endsWith(instanceId))
                 .collect(Collectors.toList());
-        processesToRemove.forEach(processMap::remove);
 
-        return lockStorage.releaseProcessesForInstance(getInstanceId());
+        processesToRemove.forEach(processMap::remove);
+        final int removedLocks = lockStorage.releaseProcessesForInstance(instanceId);
+        if (removedLocks > 0) {
+            log.info("Removed " + removedLocks + " old locks for instance `" + instanceId + "`");
+        }
+        return removedLocks;
     }
 
     /**
      * Release lock you are owner of. Ownership is based on unlock key.
      *
      * @param processName name of the process we want to have the lock renewed
-     * @param unlockKey key obtained during lock leasing
+     * @param unlockKey   key obtained during lock leasing
      * @throws ProcessIsLockedException when the lock key doesn't match the current lock for the process
      */
     public void releaseProcess(final String processName, final String unlockKey) throws ProcessIsLockedException {
@@ -363,7 +382,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             }
             processMap.remove(processName + enhancedUnlockKey);
             final LockState lockState = lockStorage.releaseProcess(processName, enhancedUnlockKey);
-            Assert.isTrue(lockState == LockState.AVAILABLE);
+            Assert.isTrue(lockState == LockState.AVAILABLE, "Lock was not released!");
             return null;
         }, defaultRetryWaitTime, retryTimes);
     }
@@ -393,24 +412,25 @@ public class Locker implements InitializingBean, ApplicationContextAware {
         }
     }
 
-    private String cleanUnlockKey(String unlockKey){
+    private String cleanUnlockKey(String unlockKey) {
         if (unlockKey == null)
             return null;
 
         return unlockKey.replace(getInstanceId(), "");
     }
 
-    private String enhanceUnlockKey(String unlockKey){
+    private String enhanceUnlockKey(String unlockKey) {
         if (unlockKey == null || unlockKey.endsWith(getInstanceId()))
             return unlockKey;
 
         return unlockKey + getInstanceId();
     }
-    private String getInstanceId(){
+
+    private String getInstanceId() {
         return InstanceIdProvider.INSTANCE_DELIMITER + getInstanceIdProvider().getInstanceId();
     }
 
-    private InstanceIdProvider getInstanceIdProvider(){
+    private InstanceIdProvider getInstanceIdProvider() {
 
         if (instanceIdProvider == null) {
             final Map<String, InstanceIdProvider> instanceIdProviders = applicationContext.getBeansOfType(InstanceIdProvider.class);
@@ -459,8 +479,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
             if (log.isDebugEnabled()) {
                 log.debug("Releasing expired lock for process " + processName);
             }
-            final LockState lockState1 = lockStorage.releaseProcess(processName, null);
-            Assert.isTrue(lockState1 == LockState.AVAILABLE);
+            final LockState theLockState = lockStorage.releaseProcess(processName, null);
+            Assert.isTrue(theLockState == LockState.AVAILABLE, "Lock was not released!");
         }
     }
 
@@ -515,7 +535,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 if (i >= times) {
                     //too many attempts
                     if (ex.getCause() instanceof ProcessIsLockedException) {
-                        throw (ProcessIsLockedException)ex.getCause();
+                        throw (ProcessIsLockedException) ex.getCause();
                     } else {
                         throw ex;
                     }
