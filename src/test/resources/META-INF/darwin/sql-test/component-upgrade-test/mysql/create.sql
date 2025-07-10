@@ -1,0 +1,4 @@
+CREATE TABLE TEST_TABLE (
+    a VARCHAR(255),
+    b VARCHAR(255)
+);
