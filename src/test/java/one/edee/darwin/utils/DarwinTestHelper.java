@@ -38,7 +38,7 @@ public class DarwinTestHelper {
 
 	public static void assertPatchHasExceptionStored(DarwinStorage darwinStorage, Patch patch) {
 		// Get the storage updater to access the JDBC template
-		if (darwinStorage instanceof one.edee.darwin.storage.DefaultDatabaseDarwinStorage) {
+		if (darwinStorage instanceof DefaultDatabaseDarwinStorage) {
 			// Query the DARWIN_SQL table to check if there are any failed SQL commands with exceptions
 			try {
 				final JdbcTemplate jdbcTemplate = new JdbcTemplate(((DefaultDatabaseDarwinStorage) darwinStorage).getDataSource());
