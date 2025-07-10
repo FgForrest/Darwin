@@ -22,12 +22,12 @@ public class DarwinConfiguration {
 	public Darwin darwin() {
 		return new DarwinBuilder(applicationContext, Darwin.DARWIN_COMPONENT_NAME, Darwin.DARWIN_COMPONENT_VERSION)
 				.withSkipIfDataSourceNotPresent(true)
-				.withLocker(locker())
+				.withLocker(darwinLocker())
 				.build();
 	}
 
 	@Bean
-	public Locker locker() {
+	public Locker darwinLocker() {
 		return new LockerBuilder(applicationContext)
 				.withSkipIfDataSourceNotPresent(true)
 				.build();
