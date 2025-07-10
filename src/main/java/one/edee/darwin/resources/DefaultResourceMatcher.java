@@ -75,7 +75,7 @@ public class DefaultResourceMatcher implements ResourceMatcher {
 		if (startIndex > -1) {
 			int index = fileName.lastIndexOf('.');
 			if (index > -1 && fileName.length() > 6) {
-				String version = fileName.substring(startIndex, index);
+				String version = fileName.substring(startIndex + 1, index);
 				return new VersionDescriptor(version);
 			}
 		}
@@ -112,7 +112,7 @@ public class DefaultResourceMatcher implements ResourceMatcher {
 				matcher.group(2)
 			};
 		}
-		return null;
+		throw new IllegalArgumentException("The resource path does not match the expected pattern: " + resourcePath);
 	}
 
 }
