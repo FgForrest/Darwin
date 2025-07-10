@@ -9,7 +9,7 @@ import one.edee.darwin.model.Patch;
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.SqlCommand;
 import one.edee.darwin.model.version.VersionDescriptor;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
+import one.edee.darwin.resources.ResourceMatcher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -38,7 +38,7 @@ import static java.util.Optional.ofNullable;
 @CommonsLog
 public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implements DarwinStorage {
 	private static final Map<StatementTypeWithPlatform, String> STATEMENTS_CACHE = new ConcurrentHashMap<>();
-	@Getter private final ResourceNameAnalyzer resourceNameAnalyzer;
+	@Getter private final ResourceMatcher resourceMatcher;
 	@Getter private final StorageChecker storageChecker;
     @Getter @Setter private boolean patchAndTableExists;
 
@@ -64,10 +64,10 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 		private final Platform platform;
 	}
 
-	public DefaultDatabaseDarwinStorage(ResourceNameAnalyzer resourceNameAnalyzer, StorageChecker storageChecker) {
-		Assert.notNull(resourceNameAnalyzer);
+	public DefaultDatabaseDarwinStorage(ResourceMatcher resourceMatcher, StorageChecker storageChecker) {
+		Assert.notNull(resourceMatcher);
 		Assert.notNull(storageChecker);
-		this.resourceNameAnalyzer = resourceNameAnalyzer;
+		this.resourceMatcher = resourceMatcher;
 		this.storageChecker = storageChecker;
 	}
 
@@ -188,7 +188,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 
     @Override
     public Patch getPatchByResourcePath(String resourcePath, String componentName) {
-        final String[] strings = resourceNameAnalyzer.getPlatformAndNameFromResourcePath(resourcePath);
+        final String[] strings = resourceMatcher.getPlatformAndNameFromResourcePath(resourcePath);
         if (storageChecker.existPatchAndSqlTable()) {
 			final Patch patchFromDb = getPatchFromDb(strings[1], componentName, Platform.identify(strings[0]));
 			if (patchFromDb == null) {
@@ -203,7 +203,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
 
 	@Override
 	public boolean isPatchRecordedByResourcePath(String resourcePath, String componentName) {
-		final String[] strings = resourceNameAnalyzer.getPlatformAndNameFromResourcePath(resourcePath);
+		final String[] strings = resourceMatcher.getPlatformAndNameFromResourcePath(resourcePath);
 		if (!storageChecker.existPatchAndSqlTable()) {
 			return false;
 		}

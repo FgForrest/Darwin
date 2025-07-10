@@ -5,10 +5,8 @@ import one.edee.darwin.model.SchemaVersion;
 import one.edee.darwin.model.SchemaVersionProvider;
 import one.edee.darwin.resources.DefaultResourceAccessor;
 import one.edee.darwin.resources.DefaultResourceMatcher;
-import one.edee.darwin.resources.DefaultResourceNameAnalyzer;
 import one.edee.darwin.resources.ResourceAccessor;
 import one.edee.darwin.resources.ResourceMatcher;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
 import org.springframework.context.ApplicationContext;
 
 /**
@@ -22,7 +20,6 @@ public class DarwinBuilder {
 	private ResourceAccessor resourceAccessor;
 	private boolean skipIfDataSourceNotPresent;
 	private ResourceMatcher resourceMatcher = new DefaultResourceMatcher();
-	private ResourceNameAnalyzer resourceNameAnalyzer = new DefaultResourceNameAnalyzer();
 	private Locker locker;
 	private String dataSourceName = "dataSource";
 	private String transactionManagerName = "transactionManager";
@@ -52,11 +49,6 @@ public class DarwinBuilder {
 		return this;
 	}
 
-	public DarwinBuilder withResourceNameAnalyzer(ResourceNameAnalyzer resourceNameAnalyzer) {
-		this.resourceNameAnalyzer = resourceNameAnalyzer;
-		return this;
-	}
-
 	public DarwinBuilder withDataSourceName(String dataSourceName) {
 		this.dataSourceName = dataSourceName;
 		return this;
@@ -77,7 +69,6 @@ public class DarwinBuilder {
 		darwin.setApplicationContext(ctx);
 		darwin.setSkipIfDataSourceNotPresent(skipIfDataSourceNotPresent);
 		darwin.setResourceMatcher(resourceMatcher);
-		darwin.setResourceNameAnalyzer(resourceNameAnalyzer);
 		darwin.setResourceAccessor(resourceAccessor);
 		darwin.setModelVersion(componentDescriptor);
 		darwin.setDataSourceName(dataSourceName);
