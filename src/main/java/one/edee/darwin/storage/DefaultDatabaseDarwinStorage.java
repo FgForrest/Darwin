@@ -281,7 +281,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
         @NonNull Patch patch,
         @NonNull String statement,
         long processTime,
-        @NonNull LocalDateTime finishedOn,
+        @Nullable LocalDateTime finishedOn,
         @Nullable Exception exception
     ) {
         if (patch.isInDb()) {
@@ -291,7 +291,7 @@ public class DefaultDatabaseDarwinStorage extends AbstractDatabaseStorage implem
             jdbcTemplate.update(
                 sql,
                 processTime,
-                java.sql.Timestamp.valueOf(finishedOn),
+                finishedOn != null ? java.sql.Timestamp.valueOf(finishedOn) : null,
                 exception != null ? exceptionToString(exception) : null,
                 patch.getPatchId(), computeHash(statement)
             );
