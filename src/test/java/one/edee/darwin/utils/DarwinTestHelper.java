@@ -4,6 +4,7 @@ import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.Darwin;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.storage.DarwinStorage;
+import one.edee.darwin.storage.DefaultDatabaseDarwinStorage;
 import one.edee.darwin.storage.DefaultDatabaseStorageUpdater;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,6 +34,29 @@ public class DarwinTestHelper {
 
 	public static void assertPatchNotFinishedInDb(DarwinStorage darwinStorage, Patch patch) {
 		assertFalse(darwinStorage.isPatchFinishedInDb(patch));
+	}
+
+	public static void assertPatchHasExceptionStored(DarwinStorage darwinStorage, Patch patch) {
+		// Get the storage updater to access the JDBC template
+		if (darwinStorage instanceof one.edee.darwin.storage.DefaultDatabaseDarwinStorage) {
+			// Query the DARWIN_SQL table to check if there are any failed SQL commands with exceptions
+			try {
+				final JdbcTemplate jdbcTemplate = new JdbcTemplate(((DefaultDatabaseDarwinStorage) darwinStorage).getDataSource());
+				String sql = "SELECT A.exception FROM DARWIN_SQL A inner join DARWIN_PATCH B on A.patchId = B.id WHERE B.patchName = ? AND exception IS NOT NULL";
+				java.util.List<String> exceptions = jdbcTemplate.queryForList(sql, String.class, patch.getPatchName());
+
+				assertFalse(exceptions.isEmpty(), "Expected to find at least one SQL command with stored exception for patch: " + patch.getPatchName());
+
+				// Verify that at least one exception is not null and not empty
+				boolean hasValidException = exceptions.stream().anyMatch(ex -> ex != null && !ex.trim().isEmpty());
+				assertTrue(hasValidException, "Expected to find at least one non-empty exception stored for patch: " + patch.getPatchName());
+
+			} catch (Exception e) {
+				throw new RuntimeException("Failed to verify exception storage", e);
+			}
+		} else {
+			throw new IllegalArgumentException("Expected DefaultDatabaseDarwinStorage instance");
+		}
 	}
 
 	public static void deleteAllInfrastructuralPages(Darwin darwin) {

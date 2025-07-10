@@ -155,7 +155,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 				            public void afterCompletion(int status) {
 				            	if (status == STATUS_ROLLED_BACK) {
 				            		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-				            		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+				            		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
 				            		txTemplate.execute(new TransactionCallbackWithoutResult() {
 							            @Override
 							            protected void doInTransactionWithoutResult(TransactionStatus status) {
