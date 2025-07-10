@@ -11,20 +11,8 @@ import one.edee.darwin.model.SchemaVersion;
 import one.edee.darwin.model.SchemaVersionProvider;
 import one.edee.darwin.model.version.VersionComparator;
 import one.edee.darwin.model.version.VersionDescriptor;
-import one.edee.darwin.resources.DefaultResourceAccessor;
-import one.edee.darwin.resources.DefaultResourceMatcher;
-import one.edee.darwin.resources.DefaultResourceNameAnalyzer;
-import one.edee.darwin.resources.PatchType;
-import one.edee.darwin.resources.ResourceAccessor;
-import one.edee.darwin.resources.ResourceMatcher;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
-import one.edee.darwin.resources.ResourcePatchMediator;
-import one.edee.darwin.storage.DarwinStorage;
-import one.edee.darwin.storage.DefaultDatabaseDarwinStorage;
-import one.edee.darwin.storage.DefaultDatabaseStorageChecker;
-import one.edee.darwin.storage.DefaultDatabaseStorageUpdater;
-import one.edee.darwin.storage.StorageChecker;
-import one.edee.darwin.storage.StorageUpdater;
+import one.edee.darwin.resources.*;
+import one.edee.darwin.storage.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -486,13 +474,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 		} finally {
 			//release lock
 			if(unlockKey != null) {
-				try {
-					locker.releaseProcess(processName, unlockKey);
-				} catch (ProcessIsLockedException e) {
-					throw new IllegalStateException(
-						"Process " + processName + " cannot be unlocked with " + unlockKey + " key!", e
-					);
-				}
+				locker.releaseProcess(processName, unlockKey);
 			}
 		}
 	}
