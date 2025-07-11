@@ -6,7 +6,6 @@ on:
   push:
     branches: [ "master" ]         # trap each push to master branch
     paths:                         # but react only to changes in code or pipeline definition
-      - pom.xml
       - src/**.*
       - .github/**.*
 
