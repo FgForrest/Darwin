@@ -54,31 +54,6 @@ jobs:
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
-      - name: Verify GPG setup
-        run: |
-          # Import GPG key silently
-          echo "$MAVEN_GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null
-          
-          # Test signing silently - redirect all output to /dev/null
-          echo "test" | gpg --batch --yes \
-            --passphrase "$MAVEN_GPG_PASSPHRASE" \
-            --pinentry-mode loopback \
-            --sign --armor --detach-sign \
-            --output /tmp/test.sig \
-            --quiet 2>/dev/null
-          
-          # Check if signing was successful (without showing content)
-          if [ -f /tmp/test.sig ] && [ -s /tmp/test.sig ]; then
-            echo "✅ GPG setup verified successfully"
-            rm -f /tmp/test.sig
-          else
-            echo "❌ GPG setup verification failed"
-            exit 1
-          fi
-        env:
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-          MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-
       - name: Build with Maven
         run: |        
           export CURRENT_VERSION="${{ steps.release_version.outputs.version }}"
