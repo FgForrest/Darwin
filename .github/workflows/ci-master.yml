@@ -66,47 +66,9 @@ jobs:
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
 
-      - name: Create distribution directory
-        run: |
-          mkdir -p ./dist
-          cp LICENSE ./dist
-          cp 'target/babylon-boot.jar' ./dist
-
-      - name: Create .zip of dist
-        uses: thedoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # v0.7.6
-        with:
-          type: 'zip'
-          filename: 'dist.zip'
-          path: './dist'
-
-      - name: Create .tar.gz of dist
-        uses: thedoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # v0.7.6
-        with:
-          type: 'tar'
-          filename: 'dist.tar.gz'
-          path: './dist'
-
       - name: Create release
         id: create_release
         uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6.1.0
         with:
           version: ${{ steps.release_version.outputs.version }}
           publish: true
-
-      - name: Upload dist.zip to release
-        uses: actions/upload-release-asset@64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 # v1.0.1
-        if: success()
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist.zip
-          asset_name: Dist (zip)
-          asset_content_type: application/zip
-
-      - name: Upload dist.tar.gz to release
-        uses: actions/upload-release-asset@64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 # v1.0.1
-        if: success()
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist.tar.gz
-          asset_name: Dist (tar.gz)
-          asset_content_type: application/gzip
