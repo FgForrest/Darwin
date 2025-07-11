@@ -1,6 +1,7 @@
 package one.edee.darwin;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.exception.ProcessIsLockedException;
@@ -11,20 +12,8 @@ import one.edee.darwin.model.SchemaVersion;
 import one.edee.darwin.model.SchemaVersionProvider;
 import one.edee.darwin.model.version.VersionComparator;
 import one.edee.darwin.model.version.VersionDescriptor;
-import one.edee.darwin.resources.DefaultResourceAccessor;
-import one.edee.darwin.resources.DefaultResourceMatcher;
-import one.edee.darwin.resources.DefaultResourceNameAnalyzer;
-import one.edee.darwin.resources.PatchType;
-import one.edee.darwin.resources.ResourceAccessor;
-import one.edee.darwin.resources.ResourceMatcher;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
-import one.edee.darwin.resources.ResourcePatchMediator;
-import one.edee.darwin.storage.DarwinStorage;
-import one.edee.darwin.storage.DefaultDatabaseDarwinStorage;
-import one.edee.darwin.storage.DefaultDatabaseStorageChecker;
-import one.edee.darwin.storage.DefaultDatabaseStorageUpdater;
-import one.edee.darwin.storage.StorageChecker;
-import one.edee.darwin.storage.StorageUpdater;
+import one.edee.darwin.resources.*;
+import one.edee.darwin.storage.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -32,10 +21,12 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.lang.Nullable;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -74,7 +65,6 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	@Getter @Setter private boolean switchOff;
 	@Getter @Setter private Locker locker;
 	@Getter @Setter private ResourceMatcher resourceMatcher = new DefaultResourceMatcher();
-	@Getter @Setter private ResourceNameAnalyzer resourceNameAnalyzer = new DefaultResourceNameAnalyzer();
 	@Getter @Setter private ResourcePatchMediator resourcePatchMediator;
 	@Getter @Setter private DarwinStorage darwinStorage;
 	@Getter @Setter private StorageUpdater storageUpdater;
@@ -122,9 +112,6 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 	    if (this.resourceMatcher == null) {
 	    	this.resourceMatcher = new DefaultResourceMatcher();
 	    }
-	    if (this.resourceNameAnalyzer == null) {
-	    	this.resourceNameAnalyzer = new DefaultResourceNameAnalyzer();
-	    }
 
         //defaults
 		final ConfigurableListableBeanFactory beanFactory = ((AbstractApplicationContext) applicationContext).getBeanFactory();
@@ -134,7 +121,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
         if (dataSourcePresent) {
             try {
                 DataSource ds = applicationContext.getBean(dataSourceName, DataSource.class);
-	            //noinspection EmptyTryBlock
+                //noinspection EmptyTryBlock,unused
 	            try (final Connection connection = ds.getConnection()) {
 	            	// do nothing we just need to check connection is alive
 	            }
@@ -148,7 +135,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
             transactionManager = transactionManagerPresent ?
 					(PlatformTransactionManager) applicationContext.getBean(transactionManagerName) : null;
 
-			resourcePatchMediator = new ResourcePatchMediator(resourceMatcher, resourceNameAnalyzer);
+			resourcePatchMediator = new ResourcePatchMediator(resourceMatcher);
 
 			if (storageChecker == null) {
 				final DefaultDatabaseStorageChecker defaultChecker = new DefaultDatabaseStorageChecker(resourcePatchMediator);
@@ -156,12 +143,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 				defaultChecker.setTransactionManager(transactionManager);
 				defaultChecker.setResourceAccessor(resourceAccessor);
 				defaultChecker.setResourceMatcher(resourceMatcher);
-				defaultChecker.setResourceNameAnalyzer(resourceNameAnalyzer);
 				defaultChecker.setResourceLoader(applicationContext);
 				storageChecker = defaultChecker;
 			}
             if (darwinStorage == null) {
-				final DefaultDatabaseDarwinStorage defaultPersister = new DefaultDatabaseDarwinStorage(resourceNameAnalyzer, storageChecker);
+				final DefaultDatabaseDarwinStorage defaultPersister = new DefaultDatabaseDarwinStorage(resourceMatcher, storageChecker);
 				defaultPersister.setDataSource(ds);
                 defaultPersister.setTransactionManager(transactionManager);
 				defaultPersister.setResourceLoader(applicationContext);
@@ -202,8 +188,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * Performs model evolution of specified component to specified version.
      * Uses default resourceMatcher and resourceNameAnalyzer.
      */
-    private void updateComponent(String componentName, String componentVersion) {
-        updateComponent(componentName, componentVersion, this.resourceMatcher, this.resourceNameAnalyzer);
+    private void updateComponent(
+		@NonNull String componentName,
+		@NonNull String componentVersion
+	) {
+        updateComponent(componentName, componentVersion, this.resourceMatcher);
     }
 
     /**
@@ -212,11 +201,12 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * @param componentName          Name of component which we want update
      * @param componentVersionString version o which we update component, MAX version
      * @param resourceMatcher        {@link ResourceMatcher}
-     * @param resourceNameAnalyzer   {@link ResourceNameAnalyzer}
      */
-    private void updateComponent(final String componentName, String componentVersionString,
-                                final ResourceMatcher resourceMatcher,
-                                final ResourceNameAnalyzer resourceNameAnalyzer) {
+    private void updateComponent(
+		@NonNull String componentName,
+		@NonNull String componentVersionString,
+        @NonNull ResourceMatcher resourceMatcher
+	) {
 		if(switchOff) {
 			if(log.isDebugEnabled()) {
 				log.debug("Darwin is switched off - no data source accessible.");
@@ -230,7 +220,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 					componentName, lastStoredVersion, versionComparator,
 					() -> doUpdateComponent(
 							lastStoredVersion, componentName, resourceMatcher,
-							versionComparator, currentVersion, resourceNameAnalyzer
+							versionComparator, currentVersion
 					)
 			);
 		}
@@ -263,9 +253,13 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * <p>
      * most needed parameter is on {@link Darwin} himself
      */
-    private void doUpdateComponent(final VersionDescriptor lastStoredVersion, final String componentName,
-                                   final ResourceMatcher resourceMatcher, final VersionComparator versionComparator,
-                                   final VersionDescriptor currentVersion, final ResourceNameAnalyzer resourceNameAnalyzer) {
+	private void doUpdateComponent(
+		@Nullable VersionDescriptor lastStoredVersion,
+		@NonNull String componentName,
+		@NonNull ResourceMatcher resourceMatcher,
+		@NonNull VersionComparator versionComparator,
+		@NonNull VersionDescriptor currentVersion
+	) {
         //if stored version is null create new storage
         final Platform platform = storageChecker.getPlatform();
         //we should try to envelope operation with transaction boundary - some database engines allows to rollback
@@ -295,7 +289,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
         //update component's storage, if version in DB is smaller then version of component
         updateStorage(
 			storedVersion, componentName, currentVersion, platform,
-			resourceMatcher, resourceNameAnalyzer, versionComparator
+			resourceMatcher, versionComparator
 		);
 
     }
@@ -304,10 +298,14 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * Method which update the component, method use all patches which find on classpath
      * most needed parameter is on {@link Darwin} himself
      */
-    private void updateStorage(final VersionDescriptor lastStoredVersion, final String componentName,
-                               final VersionDescriptor currentVersion, final Platform platform,
-                               final ResourceMatcher resourceMatcher, final ResourceNameAnalyzer resourceNameAnalyzer,
-                               final VersionComparator versionComparator) {
+	private void updateStorage(
+		@Nullable VersionDescriptor lastStoredVersion,
+		@NonNull String componentName,
+		@NonNull VersionDescriptor currentVersion,
+		@NonNull Platform platform,
+		@NonNull ResourceMatcher resourceMatcher,
+		@NonNull VersionComparator versionComparator
+	) {
         //get appropriate patches
         final Patch[] patches = resourcePatchMediator.getPatches(
         		resourceAccessor.getSortedResourceList(platform),
@@ -327,9 +325,10 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
                         		resourceMatcher.isResourceAcceptable(PatchType.EVOLVE, patch.getPatchName()) ||
 								resourceMatcher.isResourceAcceptable(PatchType.CREATE, patch.getPatchName())
 						) {
-                            if (versionComparator.compare(resourceNameAnalyzer.getVersionFromPatch(patch), currentVersion) <= 0) {
+                            if (versionComparator.compare(resourceMatcher.getVersionFromPatch(patch), currentVersion) <= 0) {
 	                            if (!darwinStorage.isPatchFinishedInDb(patch)) {
-                                    VersionDescriptor resourceVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
+                                    VersionDescriptor resourceVersion = resourceMatcher.getVersionFromPatch(patch);
+									Assert.isTrue(resourceVersion != null, "Resource version must not be null for patch: " + patch.getPatchName());
 		                            try {
 			                            if (storageChecker.guessPatchAlreadyApplied(componentName, darwinStorage, resourceVersion)) {
 				                            log.info("Component " + componentName + " marked as updated to version " + resourceVersion + " because guessing logic matched database contents.");
@@ -343,11 +342,9 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 			                            //and when everything went ok
 			                            if (lastStoredVersion == null ||
 					                            versionComparator.compare(resourceVersion, lastStoredVersion) > 0) {
-			                            	if (resourceVersion!=null) {
-												darwinStorage.updateVersionDescriptorForComponent(componentName,
-														resourceVersion.toString());
-											}
-			                            }
+                                            darwinStorage.updateVersionDescriptorForComponent(componentName,
+                                                resourceVersion.toString());
+                                        }
 		                            } catch (Exception ex) {
 			                            log.error("Failed to update " + componentName + " storage to version " + resourceVersion + ": " + ex.getMessage());
 			                            throw ex;
@@ -370,10 +367,12 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * @param componentName     name of component witch is darwind
      * @param versionComparator version of component which is present in DARWIN
      */
-    private void fillMissingPatchesForComponentsCreatedBeforePatchTableWasAvailable(final Patch[] patches,
-                                                                                    final String componentName,
-                                                                                    final VersionComparator versionComparator,
-                                                                                    final VersionDescriptor storedVersion) {
+	private void fillMissingPatchesForComponentsCreatedBeforePatchTableWasAvailable(
+		@NonNull Patch[] patches,
+		@NonNull String componentName,
+		@NonNull VersionComparator versionComparator,
+		@Nullable VersionDescriptor storedVersion
+	) {
         if (storedVersion != null && storageChecker.existPatchAndSqlTable()) {
             if (darwinStorage.isAnyPatchRecordedFor(componentName)) {
                 // because there is some record in DARWIN_PATCH table, initial setup check only create script
@@ -410,7 +409,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 									resourceMatcher.isResourceAcceptable(PatchType.EVOLVE, patch.getPatchName()) ||
 									resourceMatcher.isResourceAcceptable(PatchType.CREATE, patch.getPatchName())
 							) {
-								if(versionComparator.compare(resourceNameAnalyzer.getVersionFromPatch(patch), storedVersion) <= 0) {
+								if(versionComparator.compare(resourceMatcher.getVersionFromPatch(patch), storedVersion) <= 0) {
 									darwinStorage.markPatchAsFinished(
 											darwinStorage.insertPatchToDatabase(
 													patch.getPatchName(), patch.getComponentName(), LocalDateTime.now(), storageChecker.getPlatform()
@@ -428,7 +427,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
     /**
      * Creates new storage of a component.
      */
-    private void createNewStorage(final String componentName, Platform platform, final ResourceMatcher resourceMatcher) {
+    private void createNewStorage(
+		@NonNull String componentName,
+		@NonNull Platform platform,
+		@NonNull ResourceMatcher resourceMatcher
+	) {
         if (log.isDebugEnabled()) {
             log.debug("No component " + componentName + " storage found. Creating new one.");
         }
@@ -466,13 +469,20 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
     }
 
 	/**
-	 * Ensures that passed function is executed uniquely in the entire cluster.
-	 * @param componentName
-	 * @param existingVersion
-	 * @param comparator
-	 * @param logic
+	 * Ensures that the provided logic executes uniquely by acquiring a process-level lock
+	 * for the specified component. If the lock is already held by another thread, the logic is skipped.
+	 *
+	 * @param componentName the name of the component for which the process lock is to be acquired
+	 * @param existingVersion the existing version descriptor of the component
+	 * @param comparator the comparator used to compare version descriptors
+	 * @param logic the logic to execute once the lock is acquired
 	 */
-    private void ensureRunsUniquely(String componentName, VersionDescriptor existingVersion, VersionComparator comparator, Runnable logic) {
+    private void ensureRunsUniquely(
+		@NonNull String componentName,
+		@Nullable VersionDescriptor existingVersion,
+		@NonNull VersionComparator comparator,
+		@NonNull Runnable logic
+	) {
 		final String processName = getLockProcessName(componentName);
 		String unlockKey = null;
 		try {
@@ -486,13 +496,7 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
 		} finally {
 			//release lock
 			if(unlockKey != null) {
-				try {
-					locker.releaseProcess(processName, unlockKey);
-				} catch (ProcessIsLockedException e) {
-					throw new IllegalStateException(
-						"Process " + processName + " cannot be unlocked with " + unlockKey + " key!", e
-					);
-				}
+				locker.releaseProcess(processName, unlockKey);
 			}
 		}
 	}
@@ -501,11 +505,15 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
      * Method will try to acquire lock for auto update process. If it fails, it tries several times with some
      * timeout to let original thread to unlock the process.
      *
-     * @throws ProcessIsLockedException
+     * @throws ProcessIsLockedException if process is locked and cannot be acquired
      */
-    private String acquireProcessLockKey(String componentName, VersionDescriptor storedVersion,
-                                         VersionComparator versionComparator, String processName)
-            throws ProcessIsLockedException {
+	@Nullable
+    private String acquireProcessLockKey(
+		@NonNull String componentName,
+		@Nullable VersionDescriptor storedVersion,
+		@NonNull VersionComparator versionComparator,
+		@NonNull String processName
+	) throws ProcessIsLockedException {
 
 	    String unlockKey = null;
 	    if (lockFunctionalityAvailable(componentName, storedVersion, versionComparator)) {
@@ -534,8 +542,11 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
     /**
      * Check whether lock functionality is available (available since 1.1 of darwin component).
      */
-    private boolean lockFunctionalityAvailable(String componentName, VersionDescriptor storedVersion,
-                                               VersionComparator versionComparator) {
+	private boolean lockFunctionalityAvailable(
+		@NonNull String componentName,
+		@Nullable VersionDescriptor storedVersion,
+		@NonNull VersionComparator versionComparator
+	) {
         return !(DARWIN_COMPONENT_NAME.equals(componentName) && (storedVersion == null ||
                 versionComparator.compare(storedVersion, new VersionDescriptor("1.1")) < 1));
     }
@@ -543,7 +554,8 @@ public class Darwin implements InitializingBean, ApplicationContextAware {
     /**
      * Returns auto update process name.
      */
-    private String getLockProcessName(String componentName) {
+	@NonNull
+    private String getLockProcessName(@NonNull String componentName) {
         return componentName + ":darwinProcess";
     }
 }

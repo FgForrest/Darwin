@@ -362,29 +362,25 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      *
      * @param processName name of the process we want to have the lock renewed
      * @param unlockKey   key obtained during lock leasing
-     * @throws ProcessIsLockedException when the lock key doesn't match the current lock for the process
      */
-    public void releaseProcess(final String processName, final String unlockKey) throws ProcessIsLockedException {
+    public void releaseProcess(final String processName, final String unlockKey) {
         final String enhancedUnlockKey = enhanceUnlockKey(unlockKey);
 
         checkStatus();
-        doWithRetry((Supplier<Void>) () -> {
-            if (processName == null) {
-                String msg = "Cannot release process without a processName " +
-                        "(method was called with null processName).";
-                log.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            if (enhancedUnlockKey == null) {
-                String msg = "Cannot release process without an unlockKey (method was called with null unlockKey).";
-                log.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            processMap.remove(processName + enhancedUnlockKey);
-            final LockState lockState = lockStorage.releaseProcess(processName, enhancedUnlockKey);
-            Assert.isTrue(lockState == LockState.AVAILABLE, "Lock was not released!");
-            return null;
-        }, defaultRetryWaitTime, retryTimes);
+        if (processName == null) {
+            String msg = "Cannot release process without a processName " +
+                "(method was called with null processName).";
+            log.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        if (enhancedUnlockKey == null) {
+            String msg = "Cannot release process without an unlockKey (method was called with null unlockKey).";
+            log.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        processMap.remove(processName + enhancedUnlockKey);
+        final LockState lockState = lockStorage.releaseProcess(processName, enhancedUnlockKey);
+        Assert.isTrue(lockState == LockState.AVAILABLE, "Lock was not released!");
     }
 
     /**

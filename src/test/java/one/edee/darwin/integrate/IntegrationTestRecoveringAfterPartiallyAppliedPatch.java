@@ -23,6 +23,7 @@ import org.springframework.test.context.ContextConfiguration;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 
+import static one.edee.darwin.utils.DarwinTestHelper.assertPatchHasExceptionStored;
 import static one.edee.darwin.utils.DarwinTestHelper.assertPatchNotFinishedInDb;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -67,6 +68,9 @@ public abstract class IntegrationTestRecoveringAfterPartiallyAppliedPatch extend
 
 		//broken patch evidence should be present in DB structure
 		assertPatchNotFinishedInDb(darwinStorage, brokenPatch);
+
+		//verify that the exception from broken patch is correctly written to the database
+		assertPatchHasExceptionStored(darwinStorage, brokenPatch);
 
 		//switch resource path to the folder where the same patch has correct contents
 	    resourceAccessor4Test.setResourcePathForPatch("/META-INF/darwin/sql-test/" + platform.getFolderName() + "EstablishmentAfterFailSql/withRightSql/");

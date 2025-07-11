@@ -1,10 +1,12 @@
 package one.edee.darwin.storage;
 
+import lombok.NonNull;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.SqlCommand;
 import one.edee.darwin.model.version.VersionDescriptor;
 import one.edee.darwin.resources.ResourceAccessor;
+import org.springframework.lang.Nullable;
 
 import java.time.LocalDateTime;
 
@@ -29,14 +31,15 @@ public interface DarwinStorage {
      *
      * @param resourceAccessor to use for accessing resources
      */
-    void setResourceAccessor(ResourceAccessor resourceAccessor);
+    void setResourceAccessor(@NonNull ResourceAccessor resourceAccessor);
 
     /**
      * Returns version descriptor for particular component.
      *
      * @param componentName unique identification of the component to retrieve version for.
      */
-    VersionDescriptor getVersionDescriptorForComponent(String componentName);
+    @Nullable
+    VersionDescriptor getVersionDescriptorForComponent(@NonNull String componentName);
 
     /**
      * Updates version descriptor for particular component.
@@ -44,7 +47,7 @@ public interface DarwinStorage {
      * @param componentName unique identification of the component for updating version
      * @param version of the component
      */
-    void updateVersionDescriptorForComponent(String componentName, String version);
+    void updateVersionDescriptorForComponent(@NonNull String componentName, @NonNull String version);
 
     /**
      * Inserts patch to db and returns its ID. If patch is already in db it returns ID of such existing patch.
@@ -55,7 +58,12 @@ public interface DarwinStorage {
      * @param platform target database platform of the patch
      * @return patch identification
      */
-    Patch insertPatchToDatabase(final String patchName, final String componentName, final LocalDateTime detectedOn, final Platform platform);
+    Patch insertPatchToDatabase(
+        @NonNull String patchName,
+        @NonNull String componentName,
+        @NonNull LocalDateTime detectedOn,
+        @NonNull Platform platform
+    );
 
     /**
      * Inserts information about performed SQL command to database.
@@ -63,7 +71,7 @@ public interface DarwinStorage {
      * @param patch file name of the patch
      * @param sqlCommand contents of the SQL command inside the patch
      */
-    void insertSqlScriptToDB(Patch patch, SqlCommand sqlCommand);
+    void insertSqlScriptToDB(@NonNull Patch patch, @NonNull SqlCommand sqlCommand);
 
     /**
      * Updates information about performed SQL command in database.
@@ -71,14 +79,14 @@ public interface DarwinStorage {
      * @param patch file name of the patch
      * @param sqlCommand contents of the SQL command inside the patch
      */
-    void updateSqlScriptInDB(Patch patch, SqlCommand sqlCommand);
+    void updateSqlScriptInDB(@NonNull Patch patch, @NonNull SqlCommand sqlCommand);
 
     /**
      * Stores timestamp of the completely and <b>successfully</b> applied patch.
      *
      * @param patch identification
      */
-    void markPatchAsFinished(Patch patch);
+    void markPatchAsFinished(@NonNull Patch patch);
 
     /**
      * Returns record for the patch by its path and component name in case it exists in database.
@@ -87,7 +95,8 @@ public interface DarwinStorage {
      * @param componentName name of component on which is patch applied
      * @return patch from db, by #resourcePath and #componentName
      */
-    Patch getPatchByResourcePath(String resourcePath, String componentName);
+    @NonNull
+    Patch getPatchByResourcePath(@NonNull String resourcePath, @NonNull String componentName);
 
     /**
      * Tries to find record for the patch in internal database and looks for timestamp {@link Patch#getFinishedOn()} that
@@ -96,7 +105,7 @@ public interface DarwinStorage {
      * @param patch identification
      * @return true if patch was entirely applied
      */
-    boolean isPatchFinishedInDb(Patch patch);
+    boolean isPatchFinishedInDb(@NonNull Patch patch);
 
     /**
      * Check if the patch by its path and component name in case it exists in database.
@@ -105,7 +114,7 @@ public interface DarwinStorage {
      * @param componentName name of component on which is patch applied
      * @return true if patch record is in database
      */
-    boolean isPatchRecordedByResourcePath(String resourcePath, String componentName);
+    boolean isPatchRecordedByResourcePath(@NonNull String resourcePath, @NonNull String componentName);
 
     /**
      * Returns true if there is any patch recorded for this component.
@@ -113,12 +122,12 @@ public interface DarwinStorage {
      *
      * @param componentName name of component what we want check
      */
-    boolean isAnyPatchRecordedFor(String componentName);
+    boolean isAnyPatchRecordedFor(@NonNull String componentName);
 
     /**
      * Inserts information about the component to the database with initial data layer version of 1.0
      */
-    void insertComponentToDatabase(String componentName);
+    void insertComponentToDatabase(@NonNull String componentName);
 
     /**
      * Checks if is sql command was already applied to the database.
@@ -127,6 +136,7 @@ public interface DarwinStorage {
      * @param script {@link SqlCommand#getStatement()}
 	 * @param occurrence number of the identical occurence of the same script in the patch
      */
-    SqlScriptStatus wasSqlCommandAlreadyExecuted(int patchId, String script, int occurrence);
+    @NonNull
+    SqlScriptStatus wasSqlCommandAlreadyExecuted(int patchId, @NonNull String script, int occurrence);
 
 }

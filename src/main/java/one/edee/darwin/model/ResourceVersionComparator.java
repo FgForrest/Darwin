@@ -2,8 +2,8 @@ package one.edee.darwin.model;
 
 import one.edee.darwin.model.version.VersionComparator;
 import one.edee.darwin.model.version.VersionDescriptor;
-import one.edee.darwin.resources.DefaultResourceNameAnalyzer;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
+import one.edee.darwin.resources.DefaultResourceMatcher;
+import one.edee.darwin.resources.ResourceMatcher;
 import org.springframework.core.io.Resource;
 
 import java.io.Serializable;
@@ -19,7 +19,7 @@ import static java.util.Optional.ofNullable;
  */
 public class ResourceVersionComparator implements Comparator<Resource>, Serializable {
     private static final long serialVersionUID = -7943722730050082245L;
-    private final ResourceNameAnalyzer resourceNameAnalyzer = new DefaultResourceNameAnalyzer();
+    private final ResourceMatcher resourceMatcher = new DefaultResourceMatcher();
     private final VersionComparator versionComparator = new VersionComparator();
 
     @Override
@@ -28,8 +28,8 @@ public class ResourceVersionComparator implements Comparator<Resource>, Serializ
             throw new IllegalArgumentException("Resources to be compared against cannot be null!");
         }
 
-        final VersionDescriptor v1 = resourceNameAnalyzer.getVersionFromResource(o1);
-        final VersionDescriptor v2 = resourceNameAnalyzer.getVersionFromResource(o2);
+        final VersionDescriptor v1 = resourceMatcher.getVersionFromResource(o1);
+        final VersionDescriptor v2 = resourceMatcher.getVersionFromResource(o2);
         if (v1 != null && v2 == null) {
             return 1;
         }

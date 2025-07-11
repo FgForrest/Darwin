@@ -1,16 +1,17 @@
-darwin_mysql_junit:
-    image: mysql:8.0
-    environment:
-     - MYSQL_USER=test
-     - MYSQL_PASSWORD=test
-     - MYSQL_ROOT_PASSWORD=test
-     - MYSQL_DATABASE=test
-    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --init-connect='SET NAMES UTF8;' --innodb-flush-log-at-trx-commit=0
-    ports:
-     - "127.5.0.3:3306:3306"
-darwin_oracle_junit:
-    image: wnameless/oracle-xe-11g-r2
-    environment:
-      - ORACLE_ALLOW_REMOTE=true
-    ports:
-     - "127.5.0.3:1521:1521"
+services:
+  darwin_mysql_junit:
+      image: mysql:8.0
+      environment:
+       - MYSQL_USER=test
+       - MYSQL_PASSWORD=test
+       - MYSQL_ROOT_PASSWORD=test
+       - MYSQL_DATABASE=test
+      command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --init-connect='SET NAMES UTF8;' --innodb-flush-log-at-trx-commit=0
+      ports:
+       - "127.5.0.3:3306:3306"
+  darwin_oracle_junit:
+      image: wnameless/oracle-xe-11g-r2
+      environment:
+        - ORACLE_ALLOW_REMOTE=true
+      ports:
+       - "127.5.0.3:1521:1521"

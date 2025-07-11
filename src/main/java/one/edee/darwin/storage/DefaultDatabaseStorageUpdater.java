@@ -1,5 +1,6 @@
 package one.edee.darwin.storage;
 
+import lombok.NonNull;
 import lombok.extern.apachecommons.CommonsLog;
 import one.edee.darwin.model.Patch;
 import one.edee.darwin.model.SqlCommand;
@@ -8,10 +9,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -28,13 +28,17 @@ import java.util.regex.Pattern;
 public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage implements StorageUpdater {
 	private final StorageChecker storageChecker;
 
-	public DefaultDatabaseStorageUpdater(StorageChecker storageChecker) {
-		Assert.notNull(storageChecker);
+	public DefaultDatabaseStorageUpdater(@NonNull StorageChecker storageChecker) {
 		this.storageChecker = storageChecker;
 	}
 
 	@Override
-    public void executeScript(final String resourcePath, final String componentName, final DarwinStorage darwinStorage, final StorageChecker storageChecker) {
+    public void executeScript(
+		@NonNull String resourcePath,
+		@NonNull String componentName,
+		@NonNull DarwinStorage darwinStorage,
+		@NonNull StorageChecker storageChecker
+	) {
         if (transactionManager != null) {
             //though DDL commands makes implicit commit - do this in transaction in order to make Spring
             //return always the same connection to the database to share session among SQL commands
@@ -59,7 +63,11 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
      * @param resourcePath  path to concrete patch
      * @param componentName name of updated component
      */
-    private void performUpdate(String resourcePath, String componentName, DarwinStorage darwinStorage) {
+    private void performUpdate(
+		@NonNull String resourcePath,
+		@NonNull String componentName,
+		@NonNull DarwinStorage darwinStorage
+	) {
         final List<String> sqlCommands = resourceAccessor.getTokenizedSQLScriptContentFromResource(resourcePath);
         final Patch patch = darwinStorage.getPatchByResourcePath(resourcePath, componentName);
 	    final boolean patchAndSqlTableExists = storageChecker.existPatchAndSqlTable();
@@ -68,7 +76,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 		final Map<String, Integer> executedCommands = new HashMap<>(sqlCommands.size());
         for (String sqlCommand : sqlCommands) {
 			final Integer occurrence = executedCommands.get(sqlCommand);
-			final Integer newOccurrence = occurrence == null ? 1 : occurrence + 1;
+			final int newOccurrence = occurrence == null ? 1 : occurrence + 1;
 			executedCommands.put(sqlCommand, newOccurrence);
 	        final SqlScriptStatus executionStatus = patchAndSqlTableExists && patch.getPatchId() != null ?
 			        darwinStorage.wasSqlCommandAlreadyExecuted(patch.getPatchId(), sqlCommand, newOccurrence) : SqlScriptStatus.NOT_EXECUTED;
@@ -100,7 +108,13 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
     /**
      * Executes single SQL command.
      */
-    private void executeSqlCommand(final Patch patch, final String sqlStatement, final DarwinStorage darwinStorage, SqlScriptStatus executionStatus) {
+    @SuppressWarnings("SqlSourceToSinkFlow")
+    private void executeSqlCommand(
+		@NonNull Patch patch,
+		@NonNull String sqlStatement,
+		@NonNull DarwinStorage darwinStorage,
+		@NonNull SqlScriptStatus executionStatus
+	) {
         final long startScript = System.currentTimeMillis();
         try {
             final String sqlCommandToExecute = removeCommentsFromContent(sqlStatement);
@@ -136,12 +150,12 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
             	// we have to make this update in separate transaction after this one finishes
 	            // otherwise connection ends up in deadlock state
 	            TransactionSynchronizationManager.registerSynchronization(
-			            new TransactionSynchronizationAdapter() {
+			            new TransactionSynchronization() {
 				            @Override
 				            public void afterCompletion(int status) {
 				            	if (status == STATUS_ROLLED_BACK) {
 				            		TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-				            		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+				            		txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
 				            		txTemplate.execute(new TransactionCallbackWithoutResult() {
 							            @Override
 							            protected void doInTransactionWithoutResult(TransactionStatus status) {

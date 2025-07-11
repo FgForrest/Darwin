@@ -4,14 +4,7 @@ import one.edee.darwin.AbstractDarwinTest;
 import one.edee.darwin.Darwin;
 import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.version.VersionDescriptor;
-import one.edee.darwin.resources.DefaultResourceAccessor;
-import one.edee.darwin.resources.DefaultResourceMatcher;
-import one.edee.darwin.resources.DefaultResourceNameAnalyzer;
-import one.edee.darwin.resources.ResourceAccessor;
-import one.edee.darwin.resources.ResourceAccessorForTest;
-import one.edee.darwin.resources.ResourceMatcher;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
-import one.edee.darwin.resources.ResourcePatchMediator;
+import one.edee.darwin.resources.*;
 import one.edee.darwin.storage.DefaultDatabaseStorageCheckerTest.TestConfiguration;
 import one.edee.darwin.utils.DarwinTestHelper;
 import one.edee.darwin.utils.spring.DarwinTestConfiguration;
@@ -64,14 +57,12 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
             getJdbcTemplate().update(sql);
             DefaultDatabaseStorageChecker storageChecker = new DefaultDatabaseStorageChecker(
                     new ResourcePatchMediator(
-                            new DefaultResourceMatcher(),
-                            new DefaultResourceNameAnalyzer()
+                            new DefaultResourceMatcher()
                     )
             );
             storageChecker.setResourceAccessor(new DefaultResourceAccessor(darwin.getApplicationContext(), "utf-8", "/META-INF/darwin/sql-test/guess/"));
             storageChecker.setResourceLoader(darwin.getApplicationContext());
             storageChecker.setResourceMatcher(new DefaultResourceMatcher());
-            storageChecker.setResourceNameAnalyzer(new DefaultResourceNameAnalyzer());
             storageChecker.setDataSource(dataSource);
             storageChecker.setTransactionManager(transactionManager);
             assertEquals(new VersionDescriptor("1.2"), storageChecker.guessVersion("darwin", darwinStorage));
@@ -92,11 +83,6 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
         }
 
         @Bean
-        public ResourceNameAnalyzer resourceNameAnalyzer() {
-	        return new DefaultResourceNameAnalyzer();
-        }
-
-        @Bean
         public ResourceAccessor resourceAccessor(ResourceLoader resourceLoader) {
 	        return new ResourceAccessorForTest(resourceLoader, "UTF-8", "classpath:/META-INF/darwin/sql/");
         }
@@ -104,7 +90,7 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
         @Bean
         public DarwinStorage darwinStorage(StorageChecker storageChecker, ResourceAccessor resourceAccessor, DataSource dataSource, PlatformTransactionManager transactionManager) {
             final DefaultDatabaseDarwinStorage storage = new DefaultDatabaseDarwinStorage(
-                    new DefaultResourceNameAnalyzer(),
+                    new DefaultResourceMatcher(),
                     storageChecker
             );
             storage.setDataSource(dataSource);
@@ -117,8 +103,7 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
         public DefaultDatabaseStorageChecker storageChecker(DataSource dataSource, PlatformTransactionManager transactionManager, ResourceAccessor resourceAccessor, ResourceLoader resourceLoader) {
             final DefaultDatabaseStorageChecker storageChecker = new DefaultDatabaseStorageChecker(
                     new ResourcePatchMediator(
-                            resourceMatcher(),
-                            resourceNameAnalyzer()
+                            resourceMatcher()
                     )
             );
             storageChecker.setDataSource(dataSource);
@@ -126,7 +111,6 @@ public abstract class DefaultDatabaseStorageCheckerTest extends AbstractDarwinTe
             storageChecker.setResourceAccessor(resourceAccessor);
             storageChecker.setResourceLoader(resourceLoader);
             storageChecker.setResourceMatcher(resourceMatcher());
-            storageChecker.setResourceNameAnalyzer(resourceNameAnalyzer());
             return storageChecker;
         }
 

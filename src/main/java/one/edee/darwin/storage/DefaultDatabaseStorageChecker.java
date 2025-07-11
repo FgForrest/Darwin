@@ -1,6 +1,7 @@
 package one.edee.darwin.storage;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.apachecommons.CommonsLog;
@@ -9,11 +10,12 @@ import one.edee.darwin.model.Platform;
 import one.edee.darwin.model.version.VersionDescriptor;
 import one.edee.darwin.resources.PatchType;
 import one.edee.darwin.resources.ResourceMatcher;
-import one.edee.darwin.resources.ResourceNameAnalyzer;
 import one.edee.darwin.resources.ResourcePatchMediator;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,11 +32,14 @@ import java.util.Objects;
 public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage implements StorageChecker {
     private final ResourcePatchMediator resourcePatchMediator;
     @Setter @Getter private ResourceMatcher resourceMatcher;
-	@Setter @Getter private ResourceNameAnalyzer resourceNameAnalyzer;
 	@Setter @Getter private boolean patchAndTableExists;
 
+	@Nullable
 	@Override
-    public VersionDescriptor guessVersion(String componentName, DarwinStorage darwinStorage) {
+    public VersionDescriptor guessVersion(
+		@NonNull String componentName,
+		@NonNull DarwinStorage darwinStorage
+	) {
         final Platform platform = getPlatform();
         final Resource[] sortedResourceList = resourceAccessor.getSortedResourceList(platform);
         final Patch[] patches = resourcePatchMediator.getPatches(
@@ -44,7 +49,8 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 
         for (Patch patch : patches) {
             if (resourceMatcher.isResourceAcceptable(PatchType.GUESS, patch.getPatchName())) {
-                VersionDescriptor resourceVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
+                VersionDescriptor resourceVersion = resourceMatcher.getVersionFromPatch(patch);
+				Assert.isTrue(resourceVersion != null, "Resource version must not be null for patch: " + patch.getPatchName());
 
                 long start = System.currentTimeMillis();
                 boolean result = executeScript(patch);
@@ -65,7 +71,11 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
     }
 
 	@Override
-	public boolean guessPatchAlreadyApplied(String componentName, DarwinStorage darwinStorage, VersionDescriptor checkedVersion) {
+	public boolean guessPatchAlreadyApplied(
+		@NonNull String componentName,
+		@NonNull DarwinStorage darwinStorage,
+		@NonNull VersionDescriptor checkedVersion
+	) {
 		final Platform platform = getPlatform();
 		final Resource[] sortedResourceList = resourceAccessor.getSortedResourceList(platform);
 		final Patch[] patches = resourcePatchMediator.getPatches(
@@ -74,7 +84,7 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 
 		for (Patch patch : patches) {
 			if (resourceMatcher.isResourceAcceptable(PatchType.GUESS, patch.getPatchName())) {
-				VersionDescriptor patchVersion = resourceNameAnalyzer.getVersionFromPatch(patch);
+				VersionDescriptor patchVersion = resourceMatcher.getVersionFromPatch(patch);
 				if (patchVersion != null && Objects.equals(patchVersion, checkedVersion)) {
 					long start = System.currentTimeMillis();
 					boolean result = executeScript(patch);
@@ -89,7 +99,13 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 		return false;
 	}
 
-	private void markGuessedPatchAsFinished(DarwinStorage darwinStorage, Patch patch, VersionDescriptor resourceVersion, long start, long stop) {
+	private void markGuessedPatchAsFinished(
+		@NonNull DarwinStorage darwinStorage,
+		@NonNull Patch patch,
+		@NonNull VersionDescriptor resourceVersion,
+		long start,
+		long stop
+	) {
 		if (log.isDebugEnabled()) {
 			log.debug("Storage compatible with version: " + resourceVersion);
 		}
@@ -116,7 +132,8 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
         }
     }
 
-	public boolean existsPatchAndSqlTableNoCache() {
+	@SuppressWarnings("SqlSourceToSinkFlow")
+    public boolean existsPatchAndSqlTableNoCache() {
 		final String sqlForPatch = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/check_patchTableExist.sql");
 		final String sqlForSQL = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/check_sqlCommandTableExists.sql");
 		try {
@@ -130,13 +147,14 @@ public class DefaultDatabaseStorageChecker extends AbstractDatabaseStorage imple
 		}
 	}
 
-	private boolean executeScript(Patch patch) {
+	@SuppressWarnings("SqlSourceToSinkFlow")
+    private boolean executeScript(@NonNull Patch patch) {
 		final List<String> tokenizedScript = resourceAccessor.getTokenizedSQLScriptContentFromResource(patch.getResourcesPath());
 		try {
 			for (String sql : tokenizedScript) {
 				if (sql.trim().toLowerCase().matches("select\\s*count\\(.*")) {
 					final Integer result = jdbcTemplate.queryForObject(sql, Integer.class);
-					if (result == 0) {
+					if (result == null || result == 0) {
 						return false;
 					}
 				} else {
