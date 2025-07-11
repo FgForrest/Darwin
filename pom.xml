@@ -337,10 +337,7 @@
 		<profile>
 			<id>use-toolchains</id>
 			<activation>
-				<property>
-					<name>java.version</name>
-					<value>!1.8</value>
-				</property>
+				<jdk>[9,)</jdk>
 			</activation>
 			<build>
 				<plugins>
