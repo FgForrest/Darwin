@@ -37,10 +37,9 @@ jobs:
 
       - name: Resolve new release version
         id: release_version
-        uses: lukashornych/semantic-calendar-version@bb0a07cf0ca71a0b2b4fed52114e28092e5cac81 #v1.2.0
+        uses: codacy/git-version@4be4819f45a11cd0877c05ffe41dace2f8945ff4
         with:
           prefix: 'v'
-          year_switch_mode: 'OnMinor'
           minor-identifier: '/feat(?:\\([^)]+\\))?:/'
 
       - name: Setup Java JDK
@@ -62,11 +61,10 @@ jobs:
           mvn versions:set -DnewVersion=$NEW_VERSION
           mvn -T 1C -B -P release-sign-artifacts -Dmaven.test.skip=true deploy --file pom.xml
         env:
-          EVITA_BUILD_VERSION: ${{ steps.release_version.outputs.version }}
+          DARWIN_BUILD_VERSION: ${{ steps.release_version.outputs.version }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-          MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
       - name: Create distribution directory
         run: |
