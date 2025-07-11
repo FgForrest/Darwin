@@ -40,7 +40,7 @@ public class DefaultDatabaseStorageUpdater extends AbstractDatabaseStorage imple
 		@NonNull StorageChecker storageChecker
 	) {
         if (transactionManager != null) {
-            //though DDL commands makes implicit commit - do this in transaction in order to make Spring
+            //though DDL commands make implicit commit - do this in transaction in order to make Spring
             //return always the same connection to the database to share session among SQL commands
             new TransactionTemplate(transactionManager).execute(
                     new TransactionCallbackWithoutResult() {

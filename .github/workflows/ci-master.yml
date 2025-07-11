@@ -36,14 +36,13 @@ jobs:
 
       - name: Resolve new release version
         id: release_version
-        uses: lukashornych/semantic-calendar-version@bb0a07cf0ca71a0b2b4fed52114e28092e5cac81 #v1.2.0
+        uses: codacy/git-version@4be4819f45a11cd0877c05ffe41dace2f8945ff4
         with:
           prefix: 'v'
-          year_switch_mode: 'OnMinor'
           minor-identifier: '/feat(?:\\([^)]+\\))?:/'
 
       - name: Setup Java JDK
-        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0 setup JDK 17 for building
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1 setup JDK 17 for building
         with:
           java-version: 8
           distribution: 'temurin'
@@ -55,36 +54,16 @@ jobs:
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       - name: Build with Maven
-        run: |
+        run: |        
           export CURRENT_VERSION="${{ steps.release_version.outputs.version }}"
           export NEW_VERSION="$( echo ${CURRENT_VERSION} | sed 's/^v//')"
           mvn versions:set -DnewVersion=$NEW_VERSION
           mvn -T 1C -B -P release-sign-artifacts -Dmaven.test.skip=true deploy --file pom.xml
         env:
-          EVITA_BUILD_VERSION: ${{ steps.release_version.outputs.version }}
+          DARWIN_BUILD_VERSION: ${{ steps.release_version.outputs.version }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-
-      - name: Create distribution directory
-        run: |
-          mkdir -p ./dist
-          cp LICENSE ./dist
-          cp 'target/babylon-boot.jar' ./dist
-
-      - name: Create .zip of dist
-        uses: thedoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # v0.7.6
-        with:
-          type: 'zip'
-          filename: 'dist.zip'
-          path: './dist'
-
-      - name: Create .tar.gz of dist
-        uses: thedoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # v0.7.6
-        with:
-          type: 'tar'
-          filename: 'dist.tar.gz'
-          path: './dist'
 
       - name: Create release
         id: create_release
@@ -92,21 +71,3 @@ jobs:
         with:
           version: ${{ steps.release_version.outputs.version }}
           publish: true
-
-      - name: Upload dist.zip to release
-        uses: actions/upload-release-asset@64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 # v1.0.1
-        if: success()
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist.zip
-          asset_name: Dist (zip)
-          asset_content_type: application/zip
-
-      - name: Upload dist.tar.gz to release
-        uses: actions/upload-release-asset@64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 # v1.0.1
-        if: success()
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist.tar.gz
-          asset_name: Dist (tar.gz)
-          asset_content_type: application/gzip
