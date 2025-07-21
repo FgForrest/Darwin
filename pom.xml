@@ -64,7 +64,7 @@
 		<maven.toolchains.version>3.2.0</maven.toolchains.version>
 
 		<java.compileVersion>8</java.compileVersion>
-		<maven.compiler.version>3.10.1</maven.compiler.version>
+		<maven.compiler.version>3.14.0</maven.compiler.version>
 		<lombok.version>1.18.24</lombok.version>
 	</properties>
 
@@ -208,7 +208,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.10.1</version>
+				<version>3.14.0</version>
 				<configuration>
 					<verbose>true</verbose>
 					<fork>true</fork>
