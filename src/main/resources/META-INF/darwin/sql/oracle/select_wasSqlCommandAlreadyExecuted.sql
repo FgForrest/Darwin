@@ -1,1 +1,1 @@
-SELECT finishedOn FROM DARWIN_SQL WHERE patchId = ? AND ora_hash(statement) = ora_hash(?);
+SELECT finishedOn FROM DARWIN_SQL WHERE patchId = ? AND DBMS_LOB.compare(statement, ?) = 0;
