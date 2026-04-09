@@ -5,7 +5,7 @@ create table DARWIN
 	modified datetime not null,
 	version varchar(20) null,
 	constraint CNPK_DARWIN primary key (id),
-	index IX_DARWIN_COMPONENT (component)
+	unique index IX_DARWIN_COMPONENT (component)
 ) engine=InnoDB;
 
 create table DARWIN_LOCK

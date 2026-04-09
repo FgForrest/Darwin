@@ -2,7 +2,8 @@ create table DARWIN
 (
   component VARCHAR(255) not null,
   modified TIMESTAMP not null,
-  version VARCHAR(20) null
+  version VARCHAR(20) null,
+  constraint CNUN_DARWIN_COMPONENT unique (component)
 );
 
 create table DARWIN_LOCK

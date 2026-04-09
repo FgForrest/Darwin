@@ -55,7 +55,7 @@ import java.time.LocalDateTime;
 @CommonsLog
 public class Darwin implements InitializingBean, ApplicationContextAware {
 	public static final String DARWIN_COMPONENT_NAME = "darwin";
-	public static final String DARWIN_COMPONENT_VERSION = "1.0";
+	public static final String DARWIN_COMPONENT_VERSION = "1.1";
 
 	@Getter @Setter private String dataSourceName = "dataSource";
 	@Getter @Setter private String transactionManagerName = "transactionManager";
