@@ -23,7 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
-import java.text.SimpleDateFormat;
+import java.util.UUID;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -264,15 +264,15 @@ public class Locker implements InitializingBean, ApplicationContextAware {
 
         try {
             until = normalizeDate(until);
-            final String unlockKey = enhanceUnlockKey(Long.toHexString(System.currentTimeMillis()));
+            final String unlockKey = enhanceUnlockKey(UUID.randomUUID().toString());
+            Assert.isTrue(unlockKey.length() <= 255, "Instance identifier is too long for an execution lock.");
             final LockState lockState = lockStorage.createLock(processName, until, unlockKey);
             Assert.isTrue(lockState == LockState.LEASED, "Lock was not created!");
 
             final String cleanedUnlockKey = cleanUnlockKey(unlockKey);
             if (log.isDebugEnabled()) {
-                SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
                 log.debug("Process " + processName + " locked with unlockKey " + cleanedUnlockKey +
-                        " until " + fmt.format(until));
+                        " until " + until);
             }
 
             return cleanedUnlockKey;
@@ -313,7 +313,7 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     }
 
     /**
-     * Renews lease date for particular process, if you have correct unlock key (otherwise exeption is thrown)
+     * Renews an unexpired lease once. Lost ownership is terminal; no internal retry delays other heartbeats.
      *
      * @param processName name of the process we want to have the lock renewed
      * @param unlockKey   key obtained during lock leasing
@@ -323,17 +323,12 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     public void renewLease(final String processName, final String unlockKey, final LocalDateTime until) throws ProcessIsLockedException {
         final String enhancedUnlockKey = enhanceUnlockKey(unlockKey);
         checkStatus();
-        doWithRetry((Supplier<Void>) () -> {
-            final LocalDateTime normalizedUntil = normalizeDate(until);
-            final LockState result = lockStorage.renewLease(processName, enhancedUnlockKey, normalizedUntil);
-
-            if (result == LockState.AVAILABLE) {
-                final String msg = "Failed renew lock, process is locked with different unlock key, or lock does not exist!";
-                log.error(msg);
-                throw new RuntimeException(new ProcessIsLockedException(msg));
-            }
-            return null;
-        }, defaultRetryWaitTime, retryTimes);
+        // A missing, expired or replaced owner cannot become valid by retrying its old key.
+        final LocalDateTime normalizedUntil = normalizeDate(until);
+        final LockState result = lockStorage.renewLease(processName, enhancedUnlockKey, normalizedUntil);
+        if (result == LockState.AVAILABLE) {
+            throw new ProcessIsLockedException("Cannot renew process " + processName + ": lease expired or ownership was lost.");
+        }
     }
 
     /**

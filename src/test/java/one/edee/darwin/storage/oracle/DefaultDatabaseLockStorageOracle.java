@@ -7,8 +7,8 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * @author Radek Salay, FG Forest a.s. 7/14/16.
  */
-@ActiveProfiles(value = "MYSQL")
-@Profile(value = "MYSQL")
+@ActiveProfiles(value = "ORACLE")
+@Profile(value = "ORACLE")
 public class DefaultDatabaseLockStorageOracle extends DefaultDatabaseLockStorageTest {
 
 }

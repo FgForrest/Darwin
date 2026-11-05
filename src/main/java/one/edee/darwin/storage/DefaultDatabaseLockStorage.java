@@ -8,8 +8,9 @@ import one.edee.darwin.model.LockState;
 import one.edee.darwin.model.Platform;
 import org.springframework.dao.EmptyResultDataAccessException;
 
-import java.text.SimpleDateFormat;
+import javax.sql.DataSource;
 import java.time.LocalDateTime;
+import java.sql.Types;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,6 +41,13 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 		private final Platform platform;
 	}
 
+    /** Lock operations have a short statement budget independent of migration statements. */
+    @Override
+    public void setDataSource(DataSource source) {
+        super.setDataSource(source);
+        jdbcTemplate.setQueryTimeout(2);
+    }
+
 	@Override
 	protected int releaseDbLocksForInstance(final String instanceId) {
 		final String instanceDeleteScript = STATEMENTS_CACHE.computeIfAbsent(
@@ -63,9 +71,8 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 			if(leaseUntil != null) {
 				if(leaseUntil.isAfter(currentDate)) {
 					if(log.isDebugEnabled()) {
-						SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
                         log.debug("Found unexpired lock on process " + processName +
-                                ". Lock will expire automatically on " + fmt.format(leaseUntil));
+                                ". Lock will expire automatically on " + leaseUntil);
                     }
                     return LockState.LEASED;
                 } else {
@@ -97,8 +104,9 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 		final String deleteScript = STATEMENTS_CACHE.computeIfAbsent(
 				getKey(LockStorageStatement.LOCK_DELETE), this::readContentFromResource
 		);
-		if (jdbcTemplate.update(deleteScript, processName, unlockKey) == 0) {
-			final String msg = "No lock for process" + processName + " and unlockKey " + unlockKey + " was found!";
+		if (jdbcTemplate.update(deleteScript, new Object[]{processName, unlockKey, unlockKey},
+            new int[]{Types.VARCHAR, Types.VARCHAR, Types.VARCHAR}) == 0 && unlockKey != null) {
+			final String msg = "No owned lock for process " + processName + " was found.";
 			log.error(msg);
 			throw new IllegalStateException(msg);
 		}
