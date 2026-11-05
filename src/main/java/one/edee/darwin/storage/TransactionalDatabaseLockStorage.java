@@ -32,6 +32,16 @@ public abstract class TransactionalDatabaseLockStorage extends AbstractDatabaseS
 
     @Override
     public LocalDateTime getCurrentDatabaseTime() {
+        if (transactionTemplate != null) {
+            return transactionTemplate.execute(status -> getDbCurrentDatabaseTime());
+        }
+        return getDbCurrentDatabaseTime();
+    }
+
+    /**
+     * Reads time in the same transaction context as lock operations, avoiding an enclosing transaction's stale clock.
+     */
+    private LocalDateTime getDbCurrentDatabaseTime() {
         final String dateScript = dbResourceAccessor.getTextContentFromResource(getPlatform().getFolderName() + "/lock_current_time.sql");
         final Object databaseNow = jdbcTemplate.queryForObject(dateScript, Object.class);
         if (databaseNow instanceof Instant) {

@@ -158,35 +158,95 @@ public abstract class LockerTest extends AbstractDarwinTest {
 		}
 	}
 
-	@Test
-	public void testRenewLeaseWithRestorer() throws ProcessIsLockedException {
-		final AtomicBoolean finished = new AtomicBoolean();
-		final AtomicInteger counter = new AtomicInteger();
+    @Test
+    public void testRenewLeaseWithRestorer() throws Exception {
+        final AtomicBoolean finished = new AtomicBoolean();
+        final AtomicInteger counter = new AtomicInteger();
+        LockRestorer restorer = () -> {
+            counter.incrementAndGet();
+            return finished.get();
+        };
+        // Renewal runs every third of the lease; the remaining margin (4 s, or 2 s after one missed renewal) must
+        // exceed the up to 1.5 s error of second-precision database time (MySQL now() truncation, DATETIME rounding).
+        String key = locker.leaseProcess("testProcess", LocalDateTime.now().plusSeconds(6), restorer);
+        try {
+            String sql = "select leaseUntil from DARWIN_LOCK where processName = ?";
+            LocalDateTime original = getJdbcTemplate().queryForObject(sql, LocalDateTime.class, "testProcess");
+            // Every renewal must happen while the previous lease is still valid, otherwise the guarded
+            // renewal is rejected and the lease silently expires; observe several consecutive cycles.
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(25);
+            while (counter.get() < 3 && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+                assertFalse(locker.canLease("testProcess"), "Lease expired after " + counter.get() + " restorer checks");
+            }
+            assertTrue(counter.get() >= 3, "The restorer must keep running for several cycles");
+            Thread.sleep(500);
+            assertFalse(locker.canLease("testProcess"), "Lease must stay valid after repeated renewals");
+            LocalDateTime renewed = getJdbcTemplate().queryForObject(sql, LocalDateTime.class, "testProcess");
+            assertTrue(renewed.isAfter(original), "The restorer must actually extend the database lease");
+        } finally {
+            finished.set(true);
+            locker.releaseProcess("testProcess", key);
+        }
+    }
 
-		String unlockKey = "";
-		LockRestorer lockRestorer = () -> {
-			counter.incrementAndGet();
-			return finished.get();
-		};
+    @Test
+    public void expiredLeaseCannotBeRenewedEvenBeforeTakeover() throws Exception {
+        String process = "expired-renew-" + java.util.UUID.randomUUID();
+        String key = locker.leaseProcess(process, nowMinusHour);
+        try {
+            assertThrows(ProcessIsLockedException.class, () -> locker.renewLease(process, key, nowPlusDay));
+            assertTrue(locker.canLease(process));
+        } finally { locker.releaseProcess(process, key); }
+    }
 
-		try {
-			unlockKey = locker.leaseProcess("testProcess", LocalDateTime.now().plusSeconds(1), lockRestorer);
-		} catch (ProcessIsLockedException e) {
-			System.err.println(e);
-		}
-		try {
-			// Set process time
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-		}
-		finished.set(true);
-		locker.releaseProcess("testProcess", unlockKey);
-		try {
-			// Set after process time
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-		}
-		assertEquals(2, counter.get());
-	}
+    @Test
+    public void wrongKeyCannotDeleteAnExpiredOwnersLock() throws Exception {
+        String process = "wrong-expired-release-" + java.util.UUID.randomUUID();
+        String key = locker.leaseProcess(process, nowMinusHour);
+        assertThrows(IllegalStateException.class, () -> locker.releaseProcess(process, "foreign-key"));
+        locker.releaseProcess(process, key);
+    }
+
+    @Test
+    public void reacquisitionUsesNewOpaqueIdentityAndRejectsOldKey() throws Exception {
+        String process = "aba-" + java.util.UUID.randomUUID();
+        String previous = locker.leaseProcess(process, nowPlusHour);
+        locker.releaseProcess(process, previous);
+        String current = locker.leaseProcess(process, nowPlusHour);
+        try {
+            assertNotEquals(previous, current);
+            assertThrows(ProcessIsLockedException.class, () -> locker.renewLease(process, previous, nowPlusDay));
+            assertThrows(IllegalStateException.class, () -> locker.releaseProcess(process, previous));
+            assertFalse(locker.canLease(process));
+        } finally { locker.releaseProcess(process, current); }
+    }
+
+    @Test
+    public void simultaneousExpiredTakeoverHasExactlyOneWinner() throws Exception {
+        String process = "takeover-" + java.util.UUID.randomUUID();
+        locker.leaseProcess(process, nowMinusHour);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<String> attempt = () -> {
+            start.await();
+            try { return locker.leaseProcess(process, nowPlusHour); }
+            catch (ProcessIsLockedException expected) { return null; }
+        };
+        String winner = null;
+        try {
+            java.util.concurrent.Future<String> a = pool.submit(attempt), b = pool.submit(attempt);
+            start.countDown();
+            String x = a.get(10, java.util.concurrent.TimeUnit.SECONDS), y = b.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue((x == null) != (y == null)); winner = x == null ? y : x;
+        } finally { pool.shutdownNow(); if (winner != null) locker.releaseProcess(process, winner); }
+    }
+
+    @Test
+    public void lostRenewDoesNotUseConfiguredRetryDelay() {
+        locker.setRetryTimes(20); locker.setDefaultRetryWaitTime(3000);
+        assertTimeout(java.time.Duration.ofSeconds(2), () ->
+            assertThrows(ProcessIsLockedException.class, () -> locker.renewLease("missing-renew-fixture", "old-key", nowPlusHour)));
+    }
 
 }

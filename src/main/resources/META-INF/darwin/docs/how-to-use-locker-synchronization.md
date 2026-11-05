@@ -25,6 +25,11 @@ processed.
 At the end the process is expected to return acquired lock by passing random key acquired during lease process. For 
 returning the key use `releaseProcess` method.
 
+An expired lease cannot be renewed. Renewal requires both the current owner token and a still-valid lease, checked
+atomically against database time. Lost ownership is reported immediately as `ProcessIsLockedException`; transient
+storage failures in the public `renewLease` method retain the configured retry behavior. Treat the token as opaque.
+An explicit release only removes the lock belonging to that token, even if another owner's lock has expired.
+
 ## Recommended usage
 
 See following example for recommended usage:
@@ -61,13 +66,22 @@ your process already finished or not.
 By calling these lease methods a new instance of CheckLockTimerTask is created and scheduled and periodically calls your
 LockRestorer implementation to determine whether lock needs to be prolonged.
 
-Lock is renewed as long as:
+Lock is renewed until one of the following happens:
 
-- the maximum number of lock extensions has been reached (the maximum number is defined by the constant MAX_RENEW_COUNT = 10)
+- the maximum number of checks has been reached (`MAX_RENEW_COUNT = 29`, keeping the lock for about 10.7 lease periods)
 - the lock has already been unlocked using the releaseProcess method
 - the process signalizes TRUE in method lockRestorer.isFinished()
 
-CheckLockerTimerTask is triggered after 70% of the lock validity (eg if the lock validity is set to 10min, the
-lock is extended after 7 minutes). There is no hard guarantee the CheckLockerTimerTask will be invoked by the system.
+CheckLockTimerTask runs every third of the lease validity and extends the lock by the whole validity. For a 30-minute
+lease it calls `LockRestorer.isFinished()` every 10 minutes. One failed storage attempt can therefore be retried at the
+next check before expiration; lost ownership stops further checks. Use leases of at least several seconds because
+database time may have only second precision. There is no hard guarantee the CheckLockTimerTask will be invoked by the system.
 It uses standard `java.util.concurrent.ScheduledExecutorService.scheduleAtFixedRate` which may not invoke tasks when
 system is under pressure.
+
+Lock statement timeouts are opt-in via `DefaultDatabaseLockStorage.setQueryTimeoutSeconds`; by default the JDBC driver's
+settings are preserved. Do not enable this option with H2 on a shared or pooled data source: H2 retains statement
+timeouts on the connection and can cancel unrelated statements later. Connection acquisition is not covered by this timeout.
+
+All applications sharing `DARWIN_LOCK` must use the fixed lease contract. Older clients still execute their original
+SQL and can renew expired leases. Stopping renewal does not stop the running process or undo its external effects.
