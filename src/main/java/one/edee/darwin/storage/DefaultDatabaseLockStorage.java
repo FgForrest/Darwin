@@ -41,11 +41,30 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 		private final Platform platform;
 	}
 
-    /** Lock operations have a short statement budget independent of migration statements. */
+    /**
+     * Default statement timeout of lock operations in seconds, independent of migration statements.
+     */
+    public static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 2;
+    /**
+     * Statement timeout of lock operations in seconds so that a blocked statement cannot hold a renewal thread
+     * indefinitely. Zero or negative value means the JDBC driver default. Does not limit connection acquisition.
+     */
+    private int queryTimeoutSeconds = DEFAULT_QUERY_TIMEOUT_SECONDS;
+
     @Override
     public void setDataSource(DataSource source) {
         super.setDataSource(source);
-        jdbcTemplate.setQueryTimeout(2);
+        jdbcTemplate.setQueryTimeout(queryTimeoutSeconds);
+    }
+
+    /**
+     * Sets statement timeout of lock operations in seconds; zero or negative value means the JDBC driver default.
+     */
+    public void setQueryTimeoutSeconds(int queryTimeoutSeconds) {
+        this.queryTimeoutSeconds = queryTimeoutSeconds;
+        if (jdbcTemplate != null) {
+            jdbcTemplate.setQueryTimeout(queryTimeoutSeconds);
+        }
     }
 
 	@Override

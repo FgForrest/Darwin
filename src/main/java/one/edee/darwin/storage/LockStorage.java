@@ -38,7 +38,7 @@ public interface LockStorage {
 	 * Method releases lock.
 	 * @param processName name of the process we want to unlock
 	 * @param unlockKey exact owner key, or null to remove only an expired lease
-	 * @throws IllegalStateException when no lock for the process was found
+	 * @throws IllegalStateException when unlockKey is not null and no lock owned by it was found
 	 */
 	LockState releaseProcess(String processName, String unlockKey) throws IllegalStateException;
 

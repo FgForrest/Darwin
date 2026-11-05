@@ -166,19 +166,24 @@ public abstract class LockerTest extends AbstractDarwinTest {
             counter.incrementAndGet();
             return finished.get();
         };
-        // Allow enough time for second-precision schemas and the timer's 70% renewal threshold.
-        String key = locker.leaseProcess("testProcess", LocalDateTime.now().plusSeconds(5), restorer);
+        // Renewal runs at 70 % of the lease; the remaining 30 % (1.8 s) must exceed the up to 1.5 s error of
+        // second-precision database time (MySQL now() truncation plus DATETIME rounding).
+        String key = locker.leaseProcess("testProcess", LocalDateTime.now().plusSeconds(6), restorer);
         try {
             String sql = "select leaseUntil from DARWIN_LOCK where processName = ?";
             LocalDateTime original = getJdbcTemplate().queryForObject(sql, LocalDateTime.class, "testProcess");
-            LocalDateTime renewed = original;
-            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(9);
-            while (!renewed.isAfter(original) && System.nanoTime() < deadline) {
+            // Every renewal must happen while the previous lease is still valid, otherwise the guarded
+            // renewal is rejected and the lease silently expires; observe several consecutive cycles.
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(25);
+            while (counter.get() < 3 && System.nanoTime() < deadline) {
                 Thread.sleep(50);
-                renewed = getJdbcTemplate().queryForObject(sql, LocalDateTime.class, "testProcess");
+                assertFalse(locker.canLease("testProcess"), "Lease expired after " + counter.get() + " restorer checks");
             }
+            assertTrue(counter.get() >= 3, "The restorer must keep running for several cycles");
+            Thread.sleep(500);
+            assertFalse(locker.canLease("testProcess"), "Lease must stay valid after repeated renewals");
+            LocalDateTime renewed = getJdbcTemplate().queryForObject(sql, LocalDateTime.class, "testProcess");
             assertTrue(renewed.isAfter(original), "The restorer must actually extend the database lease");
-            assertTrue(counter.get() >= 1);
         } finally {
             finished.set(true);
             locker.releaseProcess("testProcess", key);

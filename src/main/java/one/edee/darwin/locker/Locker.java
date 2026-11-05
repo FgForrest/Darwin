@@ -98,14 +98,17 @@ import java.util.stream.Collectors;
  * By calling these lease methods a new instance of CheckLockTimerTask is created and scheduled and periodically calls your
  * LockRestorer implementation to determine whether lock needs to be prolonged.
  * <p>
- * Lock is renewed as long as:
+ * Lock is renewed until one of the following happens:
  * <p>
- * - the maximum number of lock extensions has been reached (the maximum number is defined by the constant MAX_RENEW_COUNT = 10)
+ * - the maximum number of lock extensions has been reached (the maximum number is defined by the constant
+ *   MAX_RENEW_COUNT = 14, which covers about 10.8 lease periods)
  * - the lock has already been unlocked using the releaseProcess method
  * - the process signalizes TRUE in method lockRestorer.isFinished()
  * <p>
- * CheckLockerTimerTask is triggered after 70% of the lock validity (eg if the lock validity is set to 10min, the
- * lock is extended after 7 minutes). There is no hard guarantee the CheckLockerTimerTask will be invoked by the system.
+ * CheckLockerTimerTask is triggered after 70% of the lock validity and then repeatedly after the same interval, so that
+ * every extension happens before the previous lease expires (eg if the lock validity is set to 10min, the lock is
+ * extended every 7 minutes by another 10 minutes). An expired lease cannot be renewed. There is no hard guarantee
+ * the CheckLockerTimerTask will be invoked by the system.
  * It uses standard `java.util.concurrent.ScheduledExecutorService.scheduleAtFixedRate` which may not invoke tasks when
  * system is under pressure.
  *
@@ -144,13 +147,17 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     @Setter
     private String preferredInstanceIdProvider;
     /**
-     * Default count of retry attempts when lease / renew lease or release lock fails.
+     * Default count of retry attempts when lease fails. Lease renewal is never retried - lost ownership is terminal.
      */
     @Setter
     private int retryTimes = 20;
     /**
-     * Default time to wait between repeated attempts to renew lease or release lock fails.
+     * Formerly the wait between repeated lease renewals. Renewal is no longer retried, so the value is not used;
+     * the lease retry wait is passed explicitly as `waitForLockInMilliseconds`.
+     *
+     * @deprecated kept only for binary compatibility of the setter, has no effect
      */
+    @Deprecated
     @Setter
     private long defaultRetryWaitTime = 3000L;
     @Setter
@@ -386,6 +393,9 @@ public class Locker implements InitializingBean, ApplicationContextAware {
         if (lockerRestorer != null) {
             final long delayTime = getDelayTimeInMilliseconds(now, until);
             final long renewTime = Duration.between(now, until).toMillis();
+            // Each renewal extends the lease by renewTime, so the next one must run before that lease ends:
+            // renewing with period renewTime would race with the expiry and expired leases cannot be renewed.
+            final long period = delayTime > 0 ? delayTime : renewTime;
             processMap.put(processName + unlockKey, lockerRestorer);
             final CheckLockTimerTask timerTask = new CheckLockTimerTask(this, processName, unlockKey, renewTime);
             if (scheduledExecutorService == null) {
@@ -399,7 +409,9 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 }
                 Assert.notNull(scheduledExecutorService, "Scheduled executor service not found!");
             }
-            scheduledExecutorService.scheduleAtFixedRate(timerTask, delayTime, renewTime, TimeUnit.MILLISECONDS);
+            timerTask.setScheduledFuture(
+                scheduledExecutorService.scheduleAtFixedRate(timerTask, delayTime, period, TimeUnit.MILLISECONDS)
+            );
         }
     }
 

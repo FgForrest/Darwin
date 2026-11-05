@@ -5,11 +5,11 @@ import one.edee.darwin.exception.ProcessIsLockedException;
 import one.edee.darwin.locker.LockRestorer;
 import one.edee.darwin.locker.Locker;
 
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.TimerTask;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * Timer task to renew lock for not finished processes. Task is used in {@link Locker} class to automatically prolong
@@ -20,9 +20,10 @@ import java.util.TimerTask;
 @CommonsLog
 public class CheckLockTimerTask extends TimerTask {
     /**
-     * Max count of renewing a lock
+     * Max count of renewing a lock. Renewals run at 70 % of each lease, so 14 renewals keep the lock for about
+     * 10.8 lease periods - the same window as the former 10 renewals scheduled once per lease period.
      */
-    private static final int MAX_RENEW_COUNT = 10;
+    private static final int MAX_RENEW_COUNT = 14;
     /**
      * Reference to locker
      */
@@ -43,12 +44,50 @@ public class CheckLockTimerTask extends TimerTask {
      * Renewing counter
      */
     private int renewCount;
+    /**
+     * Periodic execution of this task; {@link TimerTask#cancel()} alone does not stop a {@link java.util.concurrent.ScheduledExecutorService}.
+     */
+    private ScheduledFuture<?> scheduledFuture;
+    /**
+     * Set when the task was cancelled before its scheduled future was known.
+     */
+    private boolean cancelled;
 
     public CheckLockTimerTask(Locker locker, String processName, String unlockKey, long renewTime) {
         this.locker = locker;
         this.processName = processName;
         this.unlockKey = unlockKey;
         this.renewTime = renewTime;
+    }
+
+    /**
+     * Binds the periodic execution of this task so that {@link #cancel()} stops it.
+     */
+    public void setScheduledFuture(ScheduledFuture<?> scheduledFuture) {
+        final boolean cancelNow;
+        synchronized (this) {
+            this.scheduledFuture = scheduledFuture;
+            cancelNow = cancelled;
+        }
+        if (cancelNow) {
+            scheduledFuture.cancel(false);
+        }
+    }
+
+    /**
+     * Stops further renewals including the periodic execution in the scheduled executor.
+     */
+    @Override
+    public boolean cancel() {
+        final ScheduledFuture<?> future;
+        synchronized (this) {
+            cancelled = true;
+            future = scheduledFuture;
+        }
+        if (future != null) {
+            future.cancel(false);
+        }
+        return super.cancel();
     }
 
     @Override
@@ -97,13 +136,24 @@ public class CheckLockTimerTask extends TimerTask {
         final LocalDateTime until = LocalDateTime.now().plus(renewTime, ChronoUnit.MILLIS);
         try {
             if (log.isDebugEnabled()) {
-                SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-                log.debug("Process " + processName + " is renewed until " + fmt.format(until) + "");
+                log.debug("Process " + processName + " is renewed until " + until);
             }
             this.locker.renewLease(processName, unlockKey, until);
         } catch (ProcessIsLockedException e) {
+            // the lease expired or belongs to another owner now - it can never be renewed again
+            if (processMap.remove(processName + unlockKey) == null) {
+                // released concurrently by the owner - regular end of the process
+                if (log.isDebugEnabled()) {
+                    log.debug("Process '" + processName + "' was released meanwhile, lock is not renewed.");
+                }
+            } else if (log.isErrorEnabled()) {
+                log.error("Cannot renew lock for process: " + processName + ", lock ownership was lost.", e);
+            }
+            cancel();
+        } catch (RuntimeException e) {
+            // an exception escaping run() would silently cancel all future executions of this scheduled task
             if (log.isErrorEnabled()) {
-                log.error("Cannot renew lock for process: " + processName, e);
+                log.error("Cannot renew lock for process: " + processName + ", will retry in the next check.", e);
             }
         }
     }
