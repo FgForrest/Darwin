@@ -20,10 +20,16 @@ import java.util.concurrent.ScheduledFuture;
 @CommonsLog
 public class CheckLockTimerTask extends TimerTask {
     /**
-     * Max count of renewing a lock. Renewals run at 70 % of each lease, so 14 renewals keep the lock for about
-     * 10.8 lease periods - the same window as the former 10 renewals scheduled once per lease period.
+     * Number of checks (and renewals) per lease period. Each renewal extends the lease by a whole period, so a single
+     * transiently failed renewal is retried by the next check while the previous lease is still valid.
      */
-    private static final int MAX_RENEW_COUNT = 14;
+    public static final int CHECKS_PER_LEASE = 3;
+    /**
+     * Max count of checks. 29 checks every third of the lease end at about 9.7 lease periods and keep the lock for
+     * about 10.7 lease periods - the same window as the former 10 renewals at 0.7, 1.7, ... 9.7 lease periods.
+     * The window is time based: failed checks count as well.
+     */
+    private static final int MAX_RENEW_COUNT = 29;
     /**
      * Reference to locker
      */
@@ -138,7 +144,7 @@ public class CheckLockTimerTask extends TimerTask {
             if (log.isDebugEnabled()) {
                 log.debug("Process " + processName + " is renewed until " + until);
             }
-            this.locker.renewLease(processName, unlockKey, until);
+            this.locker.renewLeaseOnce(processName, unlockKey, until);
         } catch (ProcessIsLockedException e) {
             // the lease expired or belongs to another owner now - it can never be renewed again
             if (processMap.remove(processName + unlockKey) == null) {
@@ -153,7 +159,7 @@ public class CheckLockTimerTask extends TimerTask {
         } catch (RuntimeException e) {
             // an exception escaping run() would silently cancel all future executions of this scheduled task
             if (log.isErrorEnabled()) {
-                log.error("Cannot renew lock for process: " + processName + ", will retry in the next check.", e);
+                log.error("Cannot renew lock for process: " + processName + ", will retry in the next check before the lease expires.", e);
             }
         }
     }

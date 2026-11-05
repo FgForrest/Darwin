@@ -20,7 +20,7 @@ class CheckLockTimerTaskTest {
         AtomicInteger attempts = new AtomicInteger();
         Locker locker = new Locker() {
             @Override
-            public void renewLease(String processName, String unlockKey, LocalDateTime until) {
+            public void renewLeaseOnce(String processName, String unlockKey, LocalDateTime until) {
                 if (attempts.incrementAndGet() == 1) {
                     throw new IllegalStateException("database temporarily unavailable");
                 }
@@ -41,7 +41,7 @@ class CheckLockTimerTaskTest {
         AtomicInteger attempts = new AtomicInteger();
         Locker locker = new Locker() {
             @Override
-            public void renewLease(String processName, String unlockKey, LocalDateTime until) throws ProcessIsLockedException {
+            public void renewLeaseOnce(String processName, String unlockKey, LocalDateTime until) throws ProcessIsLockedException {
                 attempts.incrementAndGet();
                 throw new ProcessIsLockedException("lost");
             }
@@ -89,17 +89,17 @@ class CheckLockTimerTaskTest {
         AtomicInteger attempts = new AtomicInteger();
         Locker locker = new Locker() {
             @Override
-            public void renewLease(String processName, String unlockKey, LocalDateTime until) {
+            public void renewLeaseOnce(String processName, String unlockKey, LocalDateTime until) {
                 attempts.incrementAndGet();
             }
         };
         locker.getProcessMap().put("process" + "key", () -> false);
         CheckLockTimerTask task = new CheckLockTimerTask(locker, "process", "key", 1000);
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 40; i++) {
             task.run();
         }
-        // renewals every 70 % of the lease: 14 renewals cover 0.7 * 14 + 1 = 10.8 lease periods,
-        // the same window as the former 10 renewals scheduled once per lease period
-        assertEquals(14, attempts.get());
+        // checks every third of the lease: 29 checks end at 9.67 lease periods and keep the lock for 10.67 periods,
+        // the same window as the former 10 renewals at 0.7, 1.7, ... 9.7 lease periods
+        assertEquals(29, attempts.get());
     }
 }

@@ -166,8 +166,8 @@ public abstract class LockerTest extends AbstractDarwinTest {
             counter.incrementAndGet();
             return finished.get();
         };
-        // Renewal runs at 70 % of the lease; the remaining 30 % (1.8 s) must exceed the up to 1.5 s error of
-        // second-precision database time (MySQL now() truncation plus DATETIME rounding).
+        // Renewal runs every third of the lease; the remaining margin (4 s, or 2 s after one missed renewal) must
+        // exceed the up to 1.5 s error of second-precision database time (MySQL now() truncation, DATETIME rounding).
         String key = locker.leaseProcess("testProcess", LocalDateTime.now().plusSeconds(6), restorer);
         try {
             String sql = "select leaseUntil from DARWIN_LOCK where processName = ?";

@@ -100,14 +100,16 @@ import java.util.stream.Collectors;
  * <p>
  * Lock is renewed until one of the following happens:
  * <p>
- * - the maximum number of lock extensions has been reached (the maximum number is defined by the constant
- *   MAX_RENEW_COUNT = 14, which covers about 10.8 lease periods)
+ * - the maximum number of checks has been reached (the constant MAX_RENEW_COUNT = 29, i.e. checks during about
+ *   9.7 lease periods, so the lock is kept for about 10.7 lease periods)
  * - the lock has already been unlocked using the releaseProcess method
  * - the process signalizes TRUE in method lockRestorer.isFinished()
  * <p>
- * CheckLockerTimerTask is triggered after 70% of the lock validity and then repeatedly after the same interval, so that
- * every extension happens before the previous lease expires (eg if the lock validity is set to 10min, the lock is
- * extended every 7 minutes by another 10 minutes). An expired lease cannot be renewed. There is no hard guarantee
+ * CheckLockerTimerTask is triggered every third of the lock validity and extends the lock by the whole validity, so
+ * that one failed extension is retried before the lease expires (eg if the lock validity is set to 30min, the lock is
+ * extended every 10 minutes by another 30 minutes). `LockRestorer.isFinished()` is therefore called three times per
+ * lock validity. An expired lease cannot be renewed: use a validity of at least several seconds, because database time
+ * may have only second precision (e.g. MySQL `DATETIME`, Oracle `SYSDATE`). There is no hard guarantee
  * the CheckLockerTimerTask will be invoked by the system.
  * It uses standard `java.util.concurrent.ScheduledExecutorService.scheduleAtFixedRate` which may not invoke tasks when
  * system is under pressure.
@@ -116,7 +118,8 @@ import java.util.stream.Collectors;
  */
 @CommonsLog
 public class Locker implements InitializingBean, ApplicationContextAware {
-    private static final float CHECK_RENEW_RATIO = 0.7f;
+    private static final int UUID_LENGTH = 36;
+    private static final int MAX_UNLOCK_KEY_LENGTH = 255;
     @Getter
     private final Map<String, LockRestorer> processMap = new ConcurrentHashMap<>();
     /**
@@ -147,17 +150,13 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     @Setter
     private String preferredInstanceIdProvider;
     /**
-     * Default count of retry attempts when lease fails. Lease renewal is never retried - lost ownership is terminal.
+     * Default count of retry attempts when lease / renew lease fails. A lost lease is never retried - it is terminal.
      */
     @Setter
     private int retryTimes = 20;
     /**
-     * Formerly the wait between repeated lease renewals. Renewal is no longer retried, so the value is not used;
-     * the lease retry wait is passed explicitly as `waitForLockInMilliseconds`.
-     *
-     * @deprecated kept only for binary compatibility of the setter, has no effect
+     * Default time to wait between repeated attempts to renew lease after a storage failure.
      */
-    @Deprecated
     @Setter
     private long defaultRetryWaitTime = 3000L;
     @Setter
@@ -247,6 +246,8 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(final String processName, final LocalDateTime until, int waitForLockInMilliseconds)
             throws ProcessIsLockedException {
+        // configuration error is deterministic, do not wait for it in the retry loop
+        assertInstanceIdFitsUnlockKey();
         return doWithRetry(() -> {
             try {
                 return leaseProcess(processName, until);
@@ -266,13 +267,13 @@ public class Locker implements InitializingBean, ApplicationContextAware {
      */
     public String leaseProcess(String processName, LocalDateTime until) throws ProcessIsLockedException {
         checkStatus();
+        assertInstanceIdFitsUnlockKey();
         //verify there is no lock
         checkExistingLock(processName);
 
         try {
             until = normalizeDate(until);
             final String unlockKey = enhanceUnlockKey(UUID.randomUUID().toString());
-            Assert.isTrue(unlockKey.length() <= 255, "Instance identifier is too long for an execution lock.");
             final LockState lockState = lockStorage.createLock(processName, until, unlockKey);
             Assert.isTrue(lockState == LockState.LEASED, "Lock was not created!");
 
@@ -320,14 +321,47 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     }
 
     /**
-     * Renews an unexpired lease once. Lost ownership is terminal; no internal retry delays other heartbeats.
+     * Renews lease date for particular process, if you have correct unlock key. Only an unexpired lease owned by
+     * the unlock key can be renewed - lost ownership is terminal and reported immediately, while a failure of the lock
+     * storage (e.g. a transient database error) is retried `retryTimes` times after `defaultRetryWaitTime`.
      *
      * @param processName name of the process we want to have the lock renewed
      * @param unlockKey   key obtained during lock leasing
      * @param until       date until lock should be kept providing no one has unlock it by then
-     * @throws ProcessIsLockedException when lock is already leased
+     * @throws ProcessIsLockedException when the lease expired, does not exist or is owned by another unlock key
      */
     public void renewLease(final String processName, final String unlockKey, final LocalDateTime until) throws ProcessIsLockedException {
+        checkStatus();
+        for (int attempt = 1; ; attempt++) {
+            try {
+                renewLeaseOnce(processName, unlockKey, until);
+                return;
+            } catch (RuntimeException ex) {
+                if (attempt >= retryTimes) {
+                    throw ex;
+                }
+                log.warn("Failed to renew lease of process " + processName + ": " + ex.getMessage() +
+                    ". Waiting " + defaultRetryWaitTime + " milliseconds to retry the attempt.");
+                try {
+                    Thread.sleep(defaultRetryWaitTime);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
+    }
+
+    /**
+     * Renews an unexpired lease with a single attempt and no internal retry delays, for callers such as the scheduled
+     * lock restorer that have their own next check. JDBC calls still depend on data source and driver timeouts.
+     *
+     * @param processName name of the process we want to have the lock renewed
+     * @param unlockKey   key obtained during lock leasing
+     * @param until       date until lock should be kept providing no one has unlock it by then
+     * @throws ProcessIsLockedException when the lease expired, does not exist or is owned by another unlock key
+     */
+    public void renewLeaseOnce(final String processName, final String unlockKey, final LocalDateTime until) throws ProcessIsLockedException {
         final String enhancedUnlockKey = enhanceUnlockKey(unlockKey);
         checkStatus();
         // A missing, expired or replaced owner cannot become valid by retrying its old key.
@@ -391,11 +425,13 @@ public class Locker implements InitializingBean, ApplicationContextAware {
     private void setupCheckLockTimerTask(String processName, LocalDateTime until, LockRestorer lockerRestorer,
                                          LocalDateTime now, String unlockKey) {
         if (lockerRestorer != null) {
-            final long delayTime = getDelayTimeInMilliseconds(now, until);
             final long renewTime = Duration.between(now, until).toMillis();
-            // Each renewal extends the lease by renewTime, so the next one must run before that lease ends:
-            // renewing with period renewTime would race with the expiry and expired leases cannot be renewed.
-            final long period = delayTime > 0 ? delayTime : renewTime;
+            // Each renewal extends the lease by renewTime and an expired lease cannot be renewed, so checks run
+            // several times per lease: one transiently failed renewal is retried by the next check while the
+            // previous lease is still valid. Non-positive lease keeps failing in scheduleAtFixedRate as before.
+            final long period = renewTime > 0 ?
+                Math.max(1L, renewTime / CheckLockTimerTask.CHECKS_PER_LEASE) : renewTime;
+            final long delayTime = Math.max(0L, period);
             processMap.put(processName + unlockKey, lockerRestorer);
             final CheckLockTimerTask timerTask = new CheckLockTimerTask(this, processName, unlockKey, renewTime);
             if (scheduledExecutorService == null) {
@@ -413,6 +449,16 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 scheduledExecutorService.scheduleAtFixedRate(timerTask, delayTime, period, TimeUnit.MILLISECONDS)
             );
         }
+    }
+
+    /**
+     * Unlock key is a UUID followed by the instance identifier and must fit the 255 characters of the lock table.
+     */
+    private void assertInstanceIdFitsUnlockKey() {
+        Assert.isTrue(
+            UUID_LENGTH + getInstanceId().length() <= MAX_UNLOCK_KEY_LENGTH,
+            "Instance identifier is too long for an execution lock."
+        );
     }
 
     private String cleanUnlockKey(String unlockKey) {
@@ -448,21 +494,6 @@ public class Locker implements InitializingBean, ApplicationContextAware {
                 instanceIdProvider = () -> InstanceIdProvider.DEFAULT_INSTANCE_ID;
         }
         return instanceIdProvider;
-    }
-
-    /**
-     * Get delay time when timer check process
-     *
-     * @param now   created time in milliseconds
-     * @param until expired time of lock in milliseconds
-     * @return delay time in millisecond. Minimal value is 0.
-     */
-    private long getDelayTimeInMilliseconds(LocalDateTime now, LocalDateTime until) {
-        long millis = (long) (Duration.between(now, until).toMillis() * CHECK_RENEW_RATIO);
-        if (millis > 0) {
-            return millis;
-        }
-        return 0;
     }
 
     /**

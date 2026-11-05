@@ -42,28 +42,32 @@ public class DefaultDatabaseLockStorage extends TransactionalDatabaseLockStorage
 	}
 
     /**
-     * Default statement timeout of lock operations in seconds, independent of migration statements.
+     * Optional statement timeout of lock operations in seconds so that a blocked statement cannot hold a renewal
+     * thread indefinitely. Zero (default) or negative value leaves statements untouched (JDBC driver default).
+     * Does not limit connection acquisition.
      */
-    public static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 2;
-    /**
-     * Statement timeout of lock operations in seconds so that a blocked statement cannot hold a renewal thread
-     * indefinitely. Zero or negative value means the JDBC driver default. Does not limit connection acquisition.
-     */
-    private int queryTimeoutSeconds = DEFAULT_QUERY_TIMEOUT_SECONDS;
+    private int queryTimeoutSeconds;
 
     @Override
     public void setDataSource(DataSource source) {
         super.setDataSource(source);
-        jdbcTemplate.setQueryTimeout(queryTimeoutSeconds);
+        applyQueryTimeout();
     }
 
     /**
-     * Sets statement timeout of lock operations in seconds; zero or negative value means the JDBC driver default.
+     * Sets statement timeout of lock operations in seconds; zero or negative value leaves statements untouched.
+     * Do not use with H2 on a shared or pooled data source: H2 applies the timeout to the whole session, so it stays
+     * on the connection and cancels unrelated longer statements executed on it later.
      */
     public void setQueryTimeoutSeconds(int queryTimeoutSeconds) {
         this.queryTimeoutSeconds = queryTimeoutSeconds;
+        applyQueryTimeout();
+    }
+
+    private void applyQueryTimeout() {
         if (jdbcTemplate != null) {
-            jdbcTemplate.setQueryTimeout(queryTimeoutSeconds);
+            // -1 is the JdbcTemplate default: Statement#setQueryTimeout is not called at all
+            jdbcTemplate.setQueryTimeout(queryTimeoutSeconds > 0 ? queryTimeoutSeconds : -1);
         }
     }
 
